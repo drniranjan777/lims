@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // The service worker must be re-checked on every load so a new release reaches installed apps.
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }] },
       {
         source: '/:path*',
         headers: [

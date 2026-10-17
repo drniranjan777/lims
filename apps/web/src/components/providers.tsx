@@ -1,9 +1,10 @@
 'use client';
 
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { hasPermission, type Permission, type Role } from '@lims/shared';
 import { api, ApiError } from '@/lib/api';
+import { registerServiceWorker } from '@/lib/pwa';
 
 export interface Me {
   id: string;
@@ -59,6 +60,7 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   );
+  useEffect(registerServiceWorker, []);
   return (
     <QueryClientProvider client={client}>
       <ToastHost>{children}</ToastHost>

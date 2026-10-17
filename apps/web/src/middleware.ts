@@ -14,6 +14,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Skip API calls, Next.js assets and public files (logo, icon) so the sign-in page can show them.
-  matcher: ['/((?!api/|_next/|favicon.ico|.*\\.(?:png|svg|ico|webp|woff2)$).*)'],
+  // Skip API calls, Next.js assets and public files (logo, icons, PWA manifest, service worker, offline page).
+  matcher: ['/((?!api/|_next/|favicon.ico|.*\\.(?:png|svg|ico|webp|woff2|webmanifest|js|html)$).*)'],
 };

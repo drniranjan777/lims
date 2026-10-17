@@ -17,7 +17,8 @@ const snPro = localFont({
 export const metadata: Metadata = {
   title: { default: 'NLIMS', template: '%s · NLIMS' },
   description: 'NLIMS — Lab Management System for Lucid Labs',
-  icons: { icon: '/icon.svg' },
+  icons: { icon: '/icon.svg', apple: '/icons/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'NLIMS', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = { themeColor: '#062852' };

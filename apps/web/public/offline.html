@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#062852">
+  <title>Offline · NLIMS</title>
+  <link rel="icon" href="/icon.svg">
+  <style>
+    :root { color-scheme: light dark; --bg: #f3f5f7; --panel: #fff; --text: #16202a; --muted: #5d6977; --border: #e2e6eb; --primary: #094f8b; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0e1317; --panel: #151c22; --text: #e5ecf1; --muted: #98a6b3; --border: #25303a; --primary: #3ea6ee; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--text); font: 15px/1.55 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+    main { width: min(440px, 100%); padding: 36px 32px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; text-align: center; }
+    img { width: 64px; height: 64px; }
+    h1 { margin: 18px 0 8px; font-size: 22px; }
+    p { margin: 0 0 22px; color: var(--muted); }
+    button { height: 44px; padding: 0 22px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/icons/icon-192.png" alt="NLIMS">
+    <h1>You’re offline</h1>
+    <p>NLIMS needs a connection to the laboratory server. No lab data is stored on this computer, so nothing is lost — reconnect and try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+  <script>window.addEventListener('online', () => location.reload());</script>
+</body>
+</html>

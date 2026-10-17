@@ -7,10 +7,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Permission } from '@lims/shared';
 import {
   Archive, Bell as BellIcon, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, ClipboardPen, Database, FileText, FlaskConical, History,
-  House, LayoutDashboard, LogOut, Mail, Menu, MessageSquareText, Network, PackageCheck, ReceiptIndianRupee, Search, Settings, ShieldCheck, Truck, UserCog, UserRound, Users,
+  House, LayoutDashboard, LogOut, MonitorDown, Mail, Menu, MessageSquareText, Network, PackageCheck, ReceiptIndianRupee, Search, Settings, ShieldCheck, Truck, UserCog, UserRound, Users,
   type LucideIcon,
 } from 'lucide-react';
 import { api, type Paged } from '@/lib/api';
+import { useInstallPrompt } from '@/lib/pwa';
 import { fmtDateTime } from '@/lib/format';
 import { useCan, useMe } from './providers';
 import { Loading, usePopover } from './ui';
@@ -187,6 +188,7 @@ function UserMenu({ name, roles }: { name: string; roles: string[] }) {
   const { open, setOpen, ref } = usePopover();
   const router = useRouter();
   const qc = useQueryClient();
+  const { canInstall, install } = useInstallPrompt();
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
   const logout = async () => {
     await api.post('/auth/logout');
@@ -210,6 +212,11 @@ function UserMenu({ name, roles }: { name: string; roles: string[] }) {
           <Link href="/account" className="item row" onClick={() => setOpen(false)}>
             <UserRound size={16} aria-hidden /> Account
           </Link>
+          {canInstall && (
+            <button className="item row" onClick={() => (setOpen(false), void install())}>
+              <MonitorDown size={16} aria-hidden /> Install app
+            </button>
+          )}
           <button className="item row" onClick={logout}>
             <LogOut size={16} aria-hidden /> Sign out
           </button>

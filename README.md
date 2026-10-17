@@ -80,3 +80,7 @@ docker compose exec -e SEED_ADMIN_EMAIL=admin@yourlab.in -e SEED_ADMIN_PASSWORD=
 ```
 
 Back up the `pgdata` and `storage` volumes daily (database + uploaded files and released report PDFs).
+
+### Desktop app (PWA)
+
+NLIMS can be installed as a desktop app from Chrome or Edge (address-bar install icon, or **Install app** in the account menu) and from Safari on macOS (File → Add to Dock). Installation needs the site served over **HTTPS** (or `localhost`). The service worker (`apps/web/public/sw.js`) registers only in production builds; it caches static app files for a fast start and shows an offline page when the server is unreachable. Pages and `/api` responses are never cached, so no lab data is stored on the computer. When you release a change to `sw.js`, bump its `VERSION` so installed apps drop the old cache.
