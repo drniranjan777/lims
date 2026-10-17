@@ -63,7 +63,7 @@ npm test
 npm run build
 ```
 
-`npm test` runs the shared unit tests and the API integration suite. The suite **wipes `TEST_DATABASE_URL`** before it runs and refuses to start if it equals `DATABASE_URL`.
+`npm test` runs the shared unit tests and the API integration suite. `npm run test:e2e` runs the Playwright browser suite (first time: `npx playwright install chromium`); it starts its own API on port 4100 and web server on 3100 against `TEST_DATABASE_URL`, so a dev server on 3000/4000 can keep running. The suite **wipes `TEST_DATABASE_URL`** before it runs and refuses to start if it equals `DATABASE_URL`.
 
 ## Deployment
 
