@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lucid Labs LIMS Prototype</title>
+<style>
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --panel2:#f8fafb; --text:#16202a; --muted:#5d6977; --faint:#8a95a2; --border:#e2e6eb; --border2:#d3d9df;
+  --primary:#0d6b69; --primary-2:#0a5654; --primary-soft:#e0f0ef; --on-primary:#ffffff;
+  --ok:#1b7a4b; --ok-soft:#e2f3e9; --warn:#935f00; --warn-soft:#fcf0d5; --bad:#b3261e; --bad-soft:#fce7e5;
+  --info:#1b5ea8; --info-soft:#e3edfa; --neutral:#4a5663; --neutral-soft:#edf0f3;
+  --side:#0f2a2e; --side-text:#c9d7d8; --side-muted:#7e9799; --side-active:#1c4549;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.07);
+  --radius:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1317; --panel:#151c22; --panel2:#1a232a; --text:#e5ecf1; --muted:#98a6b3; --faint:#6f7e8b; --border:#25303a; --border2:#33404b;
+    --primary:#3fb2a7; --primary-2:#62c7bd; --primary-soft:#12302e; --on-primary:#06201e;
+    --ok:#52c48c; --ok-soft:#12301f; --warn:#e0b04a; --warn-soft:#33280f; --bad:#f2766d; --bad-soft:#3a1817;
+    --info:#74b3f5; --info-soft:#122a45; --neutral:#aab6c1; --neutral-soft:#222c35;
+    --side:#0a1013; --side-text:#c3cfd4; --side-muted:#6b7b82; --side-active:#16292d;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1317; --panel:#151c22; --panel2:#1a232a; --text:#e5ecf1; --muted:#98a6b3; --faint:#6f7e8b; --border:#25303a; --border2:#33404b;
+  --primary:#3fb2a7; --primary-2:#62c7bd; --primary-soft:#12302e; --on-primary:#06201e;
+  --ok:#52c48c; --ok-soft:#12301f; --warn:#e0b04a; --warn-soft:#33280f; --bad:#f2766d; --bad-soft:#3a1817;
+  --info:#74b3f5; --info-soft:#122a45; --neutral:#aab6c1; --neutral-soft:#222c35;
+  --side:#0a1013; --side-text:#c3cfd4; --side-muted:#6b7b82; --side-active:#16292d;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3,h4{margin:0;line-height:1.25}
+h1{font-size:22px;font-weight:650;letter-spacing:-.01em}
+h2{font-size:16px;font-weight:650}
+h3{font-size:14px;font-weight:650}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12.5px} .xs{font-size:11.5px}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12.5px}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+svg.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Layout */
+.app{display:grid;grid-template-columns:252px 1fr;min-height:100vh}
+.side{background:var(--side);color:var(--side-text);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 12px 24px}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 16px}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#1fa39a,#0d6b69);display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px}
+.brand b{display:block;color:#fff;font-size:15px}
+.brand span{font-size:11.5px;color:var(--side-muted)}
+.navgroup{margin-top:14px}
+.navgroup>div{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--side-muted);padding:0 10px 6px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:var(--side-text);font-size:13.5px}
+.nav a:hover{background:var(--side-active);text-decoration:none}
+.nav a.active{background:var(--side-active);color:#fff;box-shadow:inset 3px 0 0 #3fb2a7}
+.nav a .cnt{margin-left:auto;background:#3fb2a7;color:#06201e;border-radius:10px;font-size:11px;padding:0 7px;font-weight:600}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:10px 20px;min-height:58px}
+.top .crumb{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .sp{flex:1}
+.proto{font-size:11px;font-weight:600;color:var(--warn);background:var(--warn-soft);padding:3px 8px;border-radius:20px;white-space:nowrap}
+.rolebox{display:flex;align-items:center;gap:8px}
+.rolebox .who{text-align:right;line-height:1.2}
+.rolebox .who b{display:block;font-size:13px}
+.rolebox .who span{font-size:11.5px;color:var(--muted)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:700;font-size:12px}
+.iconbtn{position:relative;border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:8px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer}
+.iconbtn:hover{background:var(--panel2)}
+.iconbtn .badge{position:absolute;top:-5px;right:-5px;background:var(--bad);color:#fff;font-size:10px;border-radius:9px;min-width:17px;height:17px;display:grid;place-items:center;padding:0 4px;font-weight:700}
+#menuBtn{display:none}
+#view{padding:22px 24px 60px;max-width:1440px;width:100%}
+
+/* Components */
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.page-head .sub{margin:4px 0 0;color:var(--muted);max-width:820px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card>.hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.card>.bd{padding:16px}
+.card>.bd.flush{padding:0}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.split-l{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mt{margin-top:16px}.mt8{margin-top:8px}.mb8{margin-bottom:8px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border2);background:var(--panel);color:var(--text);padding:7px 13px;border-radius:8px;font:inherit;font-size:13px;font-weight:550;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--panel2);text-decoration:none}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn.pri:hover{background:var(--primary-2)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--border2))}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn[disabled],.btn.locked{opacity:.5;cursor:not-allowed}
+.btn svg.ic{width:15px;height:15px}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:20px;white-space:nowrap;background:var(--neutral-soft);color:var(--neutral)}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.info{background:var(--info-soft);color:var(--info)}
+.tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:5px;background:var(--neutral-soft);color:var(--muted);border:1px solid var(--border);white-space:nowrap}
+.tag.sec{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+
+.table-wrap{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--panel2);white-space:nowrap}
+.t td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.t tr:last-child td{border-bottom:none}
+.t tr.click{cursor:pointer}
+.t tr.click:hover td{background:var(--panel2)}
+.t td input,.t td select{min-width:70px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted)}
+label.f.req>span::after{content:" *";color:var(--bad)}
+input,select,textarea{font:inherit;font-size:13.5px;color:var(--text);background:var(--panel);border:1px solid var(--border2);border-radius:7px;padding:7px 9px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--primary) 35%,transparent);border-color:var(--primary)}
+input[readonly],input:disabled,select:disabled,textarea:disabled{background:var(--panel2);color:var(--muted)}
+input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--primary)}
+textarea{min-height:72px;resize:vertical}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+.fgrid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fgrid .full{grid-column:1/-1}
+.seg{display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button,.seg label{border:none;background:transparent;padding:6px 13px;font:inherit;font-size:13px;cursor:pointer;color:var(--muted);border-right:1px solid var(--border2);display:flex;align-items:center;gap:6px}
+.seg>*:last-child{border-right:none}
+.seg .on{background:var(--primary-soft);color:var(--primary);font-weight:600}
+.seg input{display:none}
+.checkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px}
+.checkgrid label{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:400;color:var(--text)}
+.dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:13px;margin:0}
+.dl dt{color:var(--muted)} .dl dd{margin:0;font-weight:500}
+
+.kpi{padding:14px 16px;cursor:pointer;transition:border-color .15s}
+.kpi:hover{border-color:var(--primary)}
+.kpi .v{font-size:26px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+
+.pipeline{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
+.pipe{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 8px;cursor:pointer;min-width:0}
+.pipe:hover{border-color:var(--primary)}
+.pipe .n{font-size:10.5px;color:var(--faint);font-weight:600}
+.pipe .c{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+.pipe .t{font-size:11.5px;color:var(--muted);line-height:1.25;margin-top:2px}
+.pipe.hot{background:var(--primary-soft);border-color:transparent}
+.pipe.hot .c{color:var(--primary)}
+
+.stepper{display:flex;list-style:none;padding:0;margin:0;gap:0;overflow-x:auto}
+.stepper li{flex:1;display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--faint);position:relative;padding-right:14px;min-width:max-content}
+.stepper li:not(:last-child)::after{content:"";flex:1;height:2px;background:var(--border2);min-width:18px}
+.stepper .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--neutral-soft);color:var(--faint);flex:none}
+.stepper li.done{color:var(--muted)}
+.stepper li.done .dot{background:var(--ok);color:#fff}
+.stepper li.done::after{background:var(--ok)}
+.stepper li.cur{color:var(--text);font-weight:600}
+.stepper li.cur .dot{background:var(--primary);color:var(--on-primary);box-shadow:0 0 0 4px var(--primary-soft)}
+.stepper li.cur.bad .dot{background:var(--bad);color:#fff;box-shadow:0 0 0 4px var(--bad-soft)}
+.stepper li.cur.bad{color:var(--bad)}
+
+.banner{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:9px;font-size:13px;background:var(--info-soft);color:var(--text);border:1px solid color-mix(in srgb,var(--info) 25%,transparent)}
+.banner svg{color:var(--info);margin-top:1px}
+.banner.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 30%,transparent)} .banner.warn svg{color:var(--warn)}
+.banner.bad{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 30%,transparent)} .banner.bad svg{color:var(--bad)}
+.banner.ok{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 30%,transparent)} .banner.ok svg{color:var(--ok)}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);padding:0 12px;overflow-x:auto}
+.tabs button{border:none;background:none;font:inherit;font-size:13px;padding:11px 12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tabpane{display:none;padding:16px}
+.tabpane.on{display:block}
+
+.progress{height:6px;background:var(--neutral-soft);border-radius:4px;overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--primary);border-radius:4px}
+.progress.ok>i{background:var(--ok)}
+
+.sumrow{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}
+.sumrow.total{border-top:1px solid var(--border);margin-top:6px;padding-top:10px;font-size:16px;font-weight:700}
+
+.flowgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.fstage{position:relative;padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--panel);box-shadow:var(--shadow);cursor:pointer}
+.fstage:hover{border-color:var(--primary)}
+.fstage .no{width:26px;height:26px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-size:12px;font-weight:700}
+.fstage h3{margin:10px 0 4px}
+.fstage p{margin:0;font-size:12.5px;color:var(--muted)}
+.fstage .own{margin-top:10px}
+.fstage.gate{border-color:color-mix(in srgb,var(--warn) 50%,var(--border))}
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.chain .node{padding:5px 10px;border-radius:7px;background:var(--panel2);border:1px solid var(--border)}
+.chain .node.done{background:var(--ok-soft);border-color:transparent;color:var(--ok);font-weight:600}
+.chain .node.cur{background:var(--primary-soft);border-color:var(--primary);color:var(--primary);font-weight:600}
+.chain .arr{color:var(--faint)}
+
+.list-item{display:flex;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);align-items:flex-start}
+.list-item:last-child{border-bottom:none}
+.list-item .dotc{width:8px;height:8px;border-radius:50%;background:var(--primary);margin-top:6px;flex:none}
+.list-item.read .dotc{background:var(--border2)}
+
+.drop{border:1.5px dashed var(--border2);border-radius:10px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;display:block}
+.drop:hover{border-color:var(--primary);color:var(--primary)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px}
+.thumb{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:var(--panel2)}
+.thumb .img{height:130px;display:grid;place-items:center;background:var(--panel);color:var(--text);overflow:hidden}
+.thumb .img img{max-width:100%;max-height:100%}
+.thumb .cap{padding:7px 10px;font-size:12px;display:flex;justify-content:space-between;gap:6px}
+
+.sig{border:1px dashed var(--border2);border-radius:8px;padding:12px;min-height:64px}
+.sig.done{border-style:solid;border-color:var(--ok);background:var(--ok-soft)}
+
+/* Report paper */
+.paperwrap{background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;overflow-x:auto}
+.paper{background:#fff;color:#1a1a1a;width:100%;max-width:800px;margin:0 auto;padding:34px 40px;box-shadow:0 2px 14px rgba(0,0,0,.14);font-size:12.5px;line-height:1.45;color-scheme:light}
+.paper h2{font-size:17px;letter-spacing:.06em;text-align:center;margin:10px 0 14px;color:#0d4f4d}
+.paper .phd{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:2px solid #0d6b69;padding-bottom:12px}
+.paper .plogo{display:flex;gap:10px;align-items:center}
+.paper .plogo .logo{width:40px;height:40px;border-radius:9px;background:linear-gradient(135deg,#1fa39a,#0d6b69);color:#fff;display:grid;place-items:center;font-weight:700}
+.paper .plogo b{font-size:18px;letter-spacing:.05em;color:#0d4f4d;display:block}
+.paper .nabl{border:2px solid #1a1a1a;border-radius:50%;width:62px;height:62px;display:grid;place-items:center;text-align:center;font-weight:800;font-size:12px;line-height:1.1}
+.paper .nabl small{display:block;font-size:8px;font-weight:600}
+.paper table{width:100%;border-collapse:collapse;margin:8px 0}
+.paper th,.paper td{border:1px solid #b9c2c9;padding:5px 7px;text-align:left;vertical-align:top}
+.paper th{background:#eef4f4;font-weight:600}
+.paper .kv td:first-child{width:24%;background:#f6f8f9;font-weight:600}
+.paper .sect{font-weight:700;color:#0d4f4d;margin:14px 0 4px;text-transform:uppercase;font-size:11.5px;letter-spacing:.06em}
+.paper .foot{display:flex;justify-content:space-between;margin-top:34px;gap:20px}
+.paper .foot div{flex:1;border-top:1px solid #777;padding-top:5px;text-align:center;font-size:11.5px}
+.paper .fig{border:1px solid #cfd6db;padding:8px;margin:8px 0;color:#0d4f4d}
+.paper .fig .cap{font-size:11px;color:#444;text-align:center;margin-top:3px}
+.paper .eor{text-align:center;margin-top:18px;font-size:11px;color:#555}
+.paper .toc li{margin:2px 0}
+
+/* Modal & toasts */
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,25,.45);z-index:50;display:grid;place-items:center;padding:16px}
+.modal-bg[hidden]{display:none}
+.modal{background:var(--panel);border-radius:12px;width:min(720px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal .mh{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal .mb{padding:18px;overflow-y:auto}
+.modal .mf{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border)}
+#toasts{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 36px))}
+.toast{background:var(--text);color:var(--bg);padding:10px 14px;border-radius:9px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:tin .2s ease-out}
+@keyframes tin{from{transform:translateY(8px);opacity:0}}
+
+.deny{max-width:560px;margin:40px auto;text-align:center;padding:30px}
+.deny svg.ic{width:36px;height:36px;color:var(--warn)}
+
+.ap-item{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);align-items:start}
+.ap-item:last-child{border-bottom:none}
+.ap-item .idx{width:24px;height:24px;border-radius:50%;background:var(--neutral-soft);display:grid;place-items:center;font-size:11.5px;font-weight:700;color:var(--muted)}
+.ap-item.ok .idx{background:var(--ok);color:#fff}
+.ap-item.chg .idx{background:var(--warn);color:#fff}
+.ap-item textarea{min-height:52px;margin-top:8px}
+.ap-choice{display:flex;gap:6px}
+.ap-choice label{display:flex;align-items:center;gap:6px;border:1px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.ap-choice label.on-ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok);font-weight:600}
+.ap-choice label.on-chg{background:var(--warn-soft);border-color:var(--warn);color:var(--warn);font-weight:600}
+
+.perm-yes{color:var(--ok);font-weight:700;text-align:center}
+.perm-no{color:var(--border2);text-align:center}
+
+@media (max-width:1200px){
+  .pipeline{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .flowgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .split{grid-template-columns:1fr}
+}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:40;transform:translateX(-100%);transition:transform .2s}
+  body.nav-open .side{transform:none;box-shadow:0 0 40px rgba(0,0,0,.4)}
+  #menuBtn{display:grid}
+  .rolebox .who{display:none}
+  .split-l,.g2,.g3{grid-template-columns:1fr}
+  .flowgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view{padding:16px 16px 60px}
+  .top{padding:10px 16px}
+}
+@media (max-width:560px){
+  .pipeline{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .flowgrid,.g4,.fgrid,.fgrid.c3{grid-template-columns:1fr}
+  .proto{display:none}
+  .paper{padding:20px 16px}
+  .ap-item{grid-template-columns:28px minmax(0,1fr)}
+  .ap-item .ap-choice{grid-column:2}
+}
+@media print{
+  body *{visibility:hidden}
+  .print-area,.print-area *{visibility:visible}
+  .print-area{position:absolute;left:0;top:0;width:100%;box-shadow:none!important;max-width:none}
+  .noprint{display:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand"><div class="logo">LL</div><div><b>Lucid Labs LIMS</b><span>UI/UX prototype · v0.9</span></div></div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <button class="iconbtn" id="menuBtn" data-act="menu" aria-label="Menu"></button>
+      <div class="crumb" id="crumb"></div>
+      <div class="sp"></div>
+      <span class="proto">Prototype · sample data</span>
+      <div class="rolebox">
+        <select id="roleSel" aria-label="View as role" style="width:auto;max-width:220px"></select>
+        <div class="who"><b id="whoName"></b><span id="whoRole"></span></div>
+        <div class="avatar" id="whoAv"></div>
+      </div>
+      <button class="iconbtn" data-act="go" data-r="notifications" aria-label="Notifications" id="bell"></button>
+      <button class="iconbtn" data-act="theme" aria-label="Toggle theme" id="themeBtn"></button>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+<div class="modal-bg" id="modal" hidden><div class="modal" role="dialog" aria-modal="true"><div class="mh"><h2 id="mTitle"></h2><button class="iconbtn" data-act="closeModal" aria-label="Close" id="mClose"></button></div><div class="mb" id="mBody"></div><div class="mf" id="mFoot"></div></div></div>
+<div id="toasts"></div>
+
+<script>
+/* ============================ ICONS ============================ */
+const ICONS={
+grid:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+flow:'M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM6 9v3a3 3 0 0 0 3 3h6',
+phone:'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z',
+doc:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+box:'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
+tag:'M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8zM7 7h.01',
+layers:'M12 2L2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+flask:'M9 2h6M10 2v7L4.5 18.5A2 2 0 0 0 6.2 21h11.6a2 2 0 0 0 1.7-2.5L14 9V2M7 15h10',
+check:'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+file:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15l2 2 4-4',
+truck:'M1 3h15v13H1zM16 8h4l3 3v5h-7zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+archive:'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+rupee:'M6 3h12M6 8h12M6 13l8.5 8M6 13h3a5 5 0 0 0 0-10',
+shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+sign:'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+bell:'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
+plus:'M12 5v14M5 12h14',
+menu:'M3 6h18M3 12h18M3 18h18',
+moon:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
+x:'M18 6L6 18M6 6l12 12',
+arrow:'M5 12h14M12 5l7 7-7 7',
+upload:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
+print:'M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z',
+eye:'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+lock:'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
+info:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01',
+alert:'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01',
+ok:'M22 11.1V12a10 10 0 1 1-5.9-9.1M22 4L12 14l-3-3',
+undo:'M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13',
+mail:'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6',
+copy:'M9 9h13v13H9zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
+trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
+users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8'
+};
+const ic=(n,cls='')=>`<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]||''}"/></svg>`;
+
+/* ============================ HELPERS ============================ */
+const pad=n=>String(n).padStart(2,'0');
+const iso=x=>`${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`;
+const TODAY=iso(new Date());
+const dt=s=>new Date(s+'T00:00:00');
+const fmt=s=>s?dt(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—';
+const addDays=(s,n)=>{const x=dt(s);x.setDate(x.getDate()+Number(n));return iso(x)};
+const addMonths=(s,n)=>{const x=dt(s);x.setMonth(x.getMonth()+Number(n));return iso(x)};
+const stamp=()=>new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const inr=n=>'₹ '+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const initials=n=>n.replace(/^(Dr\.|Mr\.|Ms\.)\s*/,'').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();
+const $=s=>document.querySelector(s);
+const round=(n,d=2)=>Math.round(n*10**d)/10**d;
+
+/* ============================ MASTER DATA ============================ */
+const LAB={name:'Lucid Labs',state:'Maharashtra',gst:'[Lucid Labs GSTIN]',addr:'[Laboratory address]',bank:{name:'[Bank name]',ac:'[Account number]',ifsc:'[IFSC]',branch:'[Branch]'}};
+const SECTIONS=['Chemical','Instrumental','Microbiology','Mechanical'];
+const ANALYSTS={Chemical:['A. Kulkarni','S. Patil'],Instrumental:['R. Mehta','P. Nair'],Microbiology:['K. Iyer','M. Shaikh'],Mechanical:['V. Rao','D. Joshi']};
+const SEC_APPROVER={Chemical:'Dr. Nitin Deshpande',Instrumental:'Dr. Nitin Deshpande',Microbiology:'Dr. Farah Khan',Mechanical:'Er. Suresh Naik'};
+const TESTS={
+ ASSAY:{name:'Assay by HPLC',method:'USP <621> / STP-HP-014',section:'Instrumental',spec:'98.0 – 102.0',unit:'%',rate:3500,nabl:true},
+ RS:{name:'Related Substances by HPLC',method:'USP <621> / STP-HP-015',section:'Instrumental',spec:'NMT 0.5',unit:'%',rate:4500,nabl:true},
+ LOD:{name:'Loss on Drying',method:'USP <731>',section:'Chemical',spec:'NMT 0.5',unit:'%',rate:800,nabl:true},
+ PH:{name:'pH (1% w/v solution)',method:'USP <791>',section:'Chemical',spec:'5.0 – 7.0',unit:'',rate:400,nabl:true},
+ MOIST:{name:'Moisture Content',method:'IS 1350 (Part I)',section:'Chemical',spec:'NMT 12.0',unit:'%',rate:600,nabl:false},
+ MLT:{name:'Microbial Limit Test (TAMC)',method:'USP <61>',section:'Microbiology',spec:'NMT 1000',unit:'cfu/g',rate:3000,nabl:true},
+ TENS:{name:'Tensile Strength',method:'ASTM E8/E8M',section:'Mechanical',spec:'Min 410',unit:'MPa',rate:2500,nabl:true},
+ HARD:{name:'Brinell Hardness',method:'ASTM E10',section:'Mechanical',spec:'120 – 180',unit:'HBW',rate:1200,nabl:true},
+ OES:{name:'Carbon Content by OES',method:'ASTM E415',section:'Instrumental',spec:'NMT 0.25',unit:'%',rate:3000,nabl:false},
+ HM:{name:'Lead (Pb) by ICP-MS',method:'USP <233>',section:'Instrumental',spec:'NMT 0.5',unit:'ppm',rate:5000,nabl:true},
+};
+const TEMPLATES={
+ Pharma:{desc:'Pharmaceutical products, APIs & excipients',fields:['Batch No.','Mfg. Date','Exp. Date','Pharmacopoeia','Label Claim','Manufacturer']},
+ Mech:{desc:'Mechanical / metallurgical specimens',fields:['Material Grade','Heat / Cast No.','Specimen Type','Dimensions','Applicable Standard']},
+ OM:{desc:'OM samples — field list to be confirmed by Lucid Labs',fields:['Material Description','Lot No.','Source / Origin','Packing Details']},
+ Gen:{desc:'General samples',fields:['Sample Description','Lot / Batch No.','Packing Details','Customer Reference']},
+};
+const FORMULAS={
+ ASSAY:{expr:'Assay (%) = (Aₜ ÷ Aₛ) × (Wₛ ÷ Wₜ) × P',vars:[['At','Peak area – test',1502340],['As','Peak area – standard',1498870],['Ws','Standard weight (mg)',50.12],['Wt','Test weight (mg)',50.30],['P','Standard potency (%)',99.8]],fn:v=>v.At/v.As*v.Ws/v.Wt*v.P},
+ LOD:{expr:'LOD (%) = (W₁ − W₂) ÷ (W₁ − W₀) × 100',vars:[['W0','Empty bottle (g)',24.1021],['W1','Bottle + sample, before (g)',26.1043],['W2','Bottle + sample, after (g)',26.0997]],fn:v=>(v.W1-v.W2)/(v.W1-v.W0)*100},
+ MOIST:{expr:'Moisture (%) = (W₁ − W₂) ÷ (W₁ − W₀) × 100',vars:[['W0','Empty dish (g)',31.2004],['W1','Dish + sample, before (g)',36.2110],['W2','Dish + sample, after (g)',35.9150]],fn:v=>(v.W1-v.W2)/(v.W1-v.W0)*100},
+};
+const EQUIP=[['HPLC-02','Agilent 1260 HPLC','15 Jan 2027'],['HPLC-04','Waters Alliance e2695','02 Dec 2026'],['BAL-07','Analytical balance 0.01 mg','30 Oct 2026'],['OVN-03','Hot-air oven 105 °C','11 Mar 2027'],['PHM-01','pH meter','19 Nov 2026'],['UTM-01','Universal testing machine 600 kN','08 Feb 2027'],['BHT-01','Brinell hardness tester','21 Jan 2027'],['OES-01','Optical emission spectrometer','14 Apr 2027'],['ICP-01','ICP-MS','26 Dec 2026'],['INC-02','BOD incubator 30–35 °C','05 Jan 2027']];
+const RELAX={none:{label:'None — standard GST',rate:null},sez:{label:'Supply to SEZ under LUT (0%)',rate:0},exp:{label:'Export of service under LUT (0%)',rate:0}};
+const DEFAULT_TERMS='1. Quotation valid for 30 days from date of issue.\n2. 100% payment against tax invoice within 15 days, unless advance agreed.\n3. Turnaround time is counted from receipt of sample and PO.\n4. Remnant samples are retained as per the lab retention policy and then disposed.';
+
+/* ============================ ROLES & PERMISSIONS ============================ */
+const PERMS={
+ 'enq.create':'Create / edit enquiries & customers',
+ 'quote.edit':'Create / edit quotations',
+ 'quote.review':'Confirm tests, methods & specs (HOD review)',
+ 'quote.authorize':'Authorize & sign quotations',
+ 'po.record':'Record PO & sample receipt',
+ 'reg.pre':'Pre-register samples',
+ 'reg.approve':'Approve registration & assign sections',
+ 'test.editMethod':'Edit / modify tests & methods',
+ 'sec.assign':'Allocate analysts',
+ 'test.enter':'Enter observations, data & results',
+ 'test.review':'Review / approve test data',
+ 'report.editCustomer':'Edit customer details before final report',
+ 'report.release':'Release reports',
+ 'dispatch.record':'Record dispatch & receipt',
+ 'stores.manage':'Record retention & disposal',
+ 'invoice.edit':'Prepare tax invoices',
+ 'invoice.authorize':'Authorize & sign invoices',
+};
+const ROLES={
+ admin:{label:'Administrator (full access)',user:'System Admin',perms:Object.keys(PERMS),nav:'*'},
+ crm:{label:'CRM User',user:'Priya Sawant',perms:['enq.create','quote.edit','po.record','reg.pre','dispatch.record'],nav:['dashboard','enquiries','quotations','samples','registration','reports','dispatch']},
+ hod:{label:'Lab HOD',user:'Dr. Anil Gokhale',perms:['quote.edit','quote.review'],nav:['dashboard','enquiries','quotations','registration']},
+ regrev:{label:'Registration Reviewer / Approver',user:'Sneha Kamat',perms:['reg.approve','test.editMethod'],nav:['dashboard','registration','samples']},
+ secapp:{label:'Section Approver',user:'Dr. Nitin Deshpande',perms:['test.editMethod','sec.assign','test.review','report.editCustomer','report.release'],nav:['dashboard','registration','section','review','reports']},
+ analyst:{label:'Section Analyst',user:'R. Mehta',perms:['test.enter'],nav:['dashboard','analyst']},
+ stores:{label:'Stores User',user:'Ganesh Pawar',perms:['stores.manage'],nav:['dashboard','stores']},
+ accounts:{label:'Accounts / Invoice User',user:'Lydia Fernandes',perms:['invoice.edit','dispatch.record'],nav:['dashboard','quotations','invoices','dispatch']},
+ signatory:{label:'Authorized Signatory',user:'Dr. Meera Rao',perms:['quote.authorize','invoice.authorize','report.release'],nav:['dashboard','quotations','reports','invoices']},
+};
+const ALWAYS=['flow','notifications','roles','approval'];
+const NAV=[
+ {g:'Overview',items:[['dashboard','Dashboard','grid'],['flow','Workflow Map','flow']]},
+ {g:'Customer & Commercial',items:[['enquiries','CRM Enquiries','phone'],['quotations','Quotations','doc'],['samples','PO & Sample Receipt','box']]},
+ {g:'Laboratory',items:[['registration','Registration','tag'],['section','Section Workbench','layers'],['analyst','Analyst Workbench','flask'],['review','Review & Approval','check'],['reports','Reports','file']]},
+ {g:'Closure',items:[['dispatch','Dispatch','truck'],['stores','Stores · Retention','archive'],['invoices','Tax Invoices','rupee']]},
+ {g:'Client Review',items:[['notifications','Notifications','bell'],['roles','Roles & Permissions','shield'],['approval','Approval Checklist','sign']]},
+];
+let ROLE=(()=>{try{return localStorage.getItem('lims.role')||'admin'}catch(e){return 'admin'}})();
+const can=p=>ROLES[ROLE].perms.includes(p);
+const navOK=r=>ROLES[ROLE].nav==='*'||ROLES[ROLE].nav.includes(r)||ALWAYS.includes(r);
+const me=()=>ROLES[ROLE].user;
+function gate(p,html){ // wraps a button: disabled with explanation when role lacks permission
+  if(can(p)) return html;
+  return html.replace(/^<button/,`<button disabled title="Your role (${ROLES[ROLE].label}) does not have: ${PERMS[p]}"`).replace(/data-act="[^"]*"/,'');
+}
+
+/* ============================ SAMPLE DATA ============================ */
+function items(codes,desc,qty=1){return codes.map(c=>({code:c,desc,qty,rate:TESTS[c].rate,method:TESTS[c].method,spec:TESTS[c].spec}))}
+function seed(){
+ const S={};
+ S.customers=[
+  {id:'C1',name:'Aarav Pharmaceuticals Pvt. Ltd.',city:'Pune',state:'Maharashtra',gst:'27AAACA1234F1Z2',contact:'Mr. Rohan Shah',phone:'+91 98200 00001',email:'rohan.shah@example.com'},
+  {id:'C2',name:'Krishna Steel Industries',city:'Ahmedabad',state:'Gujarat',gst:'24AABCK5678G1Z9',contact:'Ms. Neha Patel',phone:'+91 98250 00002',email:'neha.patel@example.com'},
+  {id:'C3',name:'Nova Polymers LLP',city:'Bengaluru',state:'Karnataka',gst:'29AAFFN9012H1Z4',contact:'Mr. Arjun Rao',phone:'+91 98450 00003',email:'arjun.rao@example.com'},
+  {id:'C4',name:'Greenleaf Agro Foods',city:'Nashik',state:'Maharashtra',gst:'27AAGCG3456J1Z7',contact:'Ms. Kavya Joshi',phone:'+91 98220 00004',email:'kavya.joshi@example.com'},
+ ];
+ S.enquiries=[
+  {id:'E-0231',date:addDays(TODAY,-2),source:'Phone',cust:'C4',contact:'Ms. Kavya Joshi',ref:'New spice blend – shelf-life study',courier:'',tests:['MOIST','PH','MLT'],status:'New',notes:'Customer wants TAT of 5 working days.'},
+  {id:'E-0230',date:addDays(TODAY,-3),source:'Mail',cust:'C3',contact:'Mr. Arjun Rao',ref:'Mail dated 25-Sep · PP granules lot',courier:'',tests:['MOIST','HM'],status:'In Discussion',notes:''},
+  {id:'E-0228',date:addDays(TODAY,-6),source:'Walk-in',cust:'C2',contact:'Ms. Neha Patel',ref:'Plant-2 plate qualification',courier:'',tests:['TENS','HARD','OES'],status:'Quotation Prepared',notes:''},
+  {id:'E-0225',date:addDays(TODAY,-10),source:'Reference/Other',cust:'C1',contact:'Mr. Rohan Shah',ref:'Referred by QA consultant',courier:'Blue Dart 7788120045',tests:['ASSAY','RS','LOD','MLT'],status:'Closed',notes:''},
+ ];
+ const po=(no,date,val,rdate,mode,cour,awb,n)=>({po:{no,date,value:val},receipt:{date:rdate,mode,courier:cour,awb,count:n,condition:'Intact',storage:'Ambient',by:'Priya Sawant',confirmed:true}});
+ S.quotes=[
+  {id:'Q-26-0113',date:addDays(TODAY,-1),valid:addDays(TODAY,29),enq:'E-0230',cust:'C3',status:'Draft',discount:0,items:items(['MOIST','HM'],'PP granules'),hodOk:false,signedBy:null,terms:DEFAULT_TERMS},
+  {id:'Q-26-0112',date:addDays(TODAY,-5),valid:addDays(TODAY,25),enq:'E-0228',cust:'C2',status:'Sent',discount:5,items:items(['TENS','HARD','OES'],'MS plate specimens',3),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS},
+  {id:'Q-26-0111',date:addDays(TODAY,-8),valid:addDays(TODAY,22),enq:null,cust:'C4',status:'Accepted',discount:0,items:items(['MOIST','PH','MLT'],'Spray-dried tomato powder'),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS,...po('GAF/PO/2231',addDays(TODAY,-4),4700,addDays(TODAY,-2),'Hand delivery','','',1)},
+  {id:'Q-26-0110',date:addDays(TODAY,-9),valid:addDays(TODAY,21),enq:null,cust:'C1',status:'Accepted',discount:10,items:items(['ASSAY','LOD','HM'],'Paracetamol API'),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS,...po('AP/PO/7790',addDays(TODAY,-3),9300,addDays(TODAY,-1),'Courier','Blue Dart','7788121190',2)},
+  {id:'Q-26-0109',date:addDays(TODAY,-10),valid:addDays(TODAY,20),enq:'E-0225',cust:'C1',status:'Accepted',discount:10,items:items(['ASSAY','RS','LOD','MLT'],'Metformin HCl tablets 500 mg'),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS,...po('AP/PO/7781',addDays(TODAY,-8),10620,addDays(TODAY,-7),'Courier','Blue Dart','7788120045',1)},
+  {id:'Q-26-0104',date:addDays(TODAY,-20),valid:addDays(TODAY,10),enq:null,cust:'C4',status:'Accepted',discount:0,items:items(['MOIST','PH','MLT'],'Dehydrated onion flakes'),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS,...po('GAF/PO/2198',addDays(TODAY,-16),4000,addDays(TODAY,-14),'Hand delivery','','',1)},
+  {id:'Q-26-0098',date:addDays(TODAY,-28),valid:addDays(TODAY,2),enq:null,cust:'C2',status:'Accepted',discount:5,items:items(['TENS','HARD','OES'],'MS plate IS 2062 E250'),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS,...po('KSI/PO/0917',addDays(TODAY,-25),6400,addDays(TODAY,-23),'Courier','DTDC','D4455660011',3)},
+  {id:'Q-26-0091',date:addDays(TODAY,-48),valid:addDays(TODAY,-18),enq:null,cust:'C3',status:'Accepted',discount:0,items:items(['MOIST'],'PP granules – lot NP-0811'),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS,...po('NP/PO/551',addDays(TODAY,-45),600,addDays(TODAY,-44),'Courier','Blue Dart','7788110003',1)},
+  {id:'Q-26-0088',date:addDays(TODAY,-52),valid:addDays(TODAY,-22),enq:null,cust:'C3',status:'Expired',discount:0,items:items(['HM'],'Masterbatch'),hodOk:true,signedBy:'Dr. Meera Rao',terms:DEFAULT_TERMS},
+ ];
+ const R=(o)=>Object.assign({status:'Registered',report:'Draft',tat:addDays(o.received,7),reportType:'final',nabl:true,spec:true,custEdit:null,verifyCombined:false},o);
+ S.regs=[
+  R({id:'P-0145',no:null,pre:'PRE/26-27/0145',q:'Q-26-0110',cust:'C1',template:'Pharma',sample:'Paracetamol API',qty:'2 × 50 g',received:addDays(TODAY,-1),regDate:null,status:'Pre-Registered',report:null,fields:{'Batch No.':'PCM-2609-A','Mfg. Date':'Sep 2026','Exp. Date':'Aug 2031','Pharmacopoeia':'IP 2022','Label Claim':'—','Manufacturer':'Aarav Pharmaceuticals'},tests:['ASSAY','LOD','HM'].map(c=>({code:c,method:TESTS[c].method,spec:TESTS[c].spec,section:TESTS[c].section}))}),
+  R({id:'REG-0144',no:'LL/REG/26-27/0144',pre:'PRE/26-27/0144',q:'Q-26-0111',cust:'C4',template:'Gen',sample:'Spray-dried Tomato Powder',qty:'500 g',received:addDays(TODAY,-2),regDate:addDays(TODAY,-1),fields:{'Sample Description':'Red free-flowing powder','Lot / Batch No.':'TP-0926','Packing Details':'LDPE pouch, sealed','Customer Reference':'GAF/QA/112'}}),
+  R({id:'REG-0142',no:'LL/REG/26-27/0142',pre:'PRE/26-27/0142',q:'Q-26-0109',cust:'C1',template:'Pharma',sample:'Metformin HCl Tablets 500 mg',qty:'60 tablets',received:addDays(TODAY,-7),regDate:addDays(TODAY,-6),fields:{'Batch No.':'MT2609','Mfg. Date':'Aug 2026','Exp. Date':'Jul 2028','Pharmacopoeia':'USP 2025','Label Claim':'500 mg per tablet','Manufacturer':'Aarav Pharmaceuticals'}}),
+  R({id:'REG-0138',no:'LL/REG/26-27/0138',pre:'PRE/26-27/0138',q:'Q-26-0104',cust:'C4',template:'Gen',sample:'Dehydrated Onion Flakes',qty:'1 kg',received:addDays(TODAY,-14),regDate:addDays(TODAY,-13),report:'Preview',fields:{'Sample Description':'Off-white flakes','Lot / Batch No.':'GL-0917','Packing Details':'HDPE bag','Customer Reference':'GAF/QA/098'}}),
+  R({id:'REG-0131',no:'LL/REG/26-27/0131',pre:'PRE/26-27/0131',q:'Q-26-0098',cust:'C2',template:'Mech',sample:'MS Plate IS 2062 E250',qty:'3 specimens',received:addDays(TODAY,-23),regDate:addDays(TODAY,-22),report:'Submitted/Dispatched',reportType:'multi',releasedOn:addDays(TODAY,-6),fields:{'Material Grade':'IS 2062 E250 BR','Heat / Cast No.':'H-5521','Specimen Type':'Flat tensile + hardness block','Dimensions':'12 mm plate','Applicable Standard':'IS 2062:2011'}}),
+  R({id:'REG-0125',no:'LL/REG/26-27/0125',pre:'PRE/26-27/0125',q:'Q-26-0091',cust:'C3',template:'Gen',sample:'PP Granules – Lot NP-0811',qty:'250 g',received:addDays(TODAY,-44),regDate:addDays(TODAY,-43),report:'Submitted/Dispatched',releasedOn:addDays(TODAY,-38),nabl:false,fields:{'Sample Description':'Natural PP granules','Lot / Batch No.':'NP-0811','Packing Details':'Zip-lock pouch','Customer Reference':'—'}}),
+ ];
+ const W=(id,reg,code,analyst,status,values,result,extra={})=>Object.assign({id,reg,code,section:TESTS[code].section,analyst,status,method:TESTS[code].method,spec:TESTS[code].spec,unit:TESTS[code].unit,values,reps:Math.max(2,values.length||2),result,raw:'',chem:[],equip:[],files:[],remarks:'',signed:status==='Approved'||status==='Submitted for Review'?{by:analyst,at:'—'}:null,returnNote:'',reviewNote:'',reviewedBy:status==='Approved'?SEC_APPROVER[TESTS[code].section]:'',calc:{}},extra);
+ S.work=[
+  W('W-0301','REG-0144','MOIST',null,'Unassigned',[],''),
+  W('W-0302','REG-0144','PH',null,'Unassigned',[],''),
+  W('W-0303','REG-0144','MLT',null,'Unassigned',[],''),
+  W('W-0290','REG-0142','LOD','S. Patil','Approved',[0.21,0.24],'0.23'),
+  W('W-0291','REG-0142','ASSAY','R. Mehta','Submitted for Review',[99.4,99.8,99.6],'99.6',{raw:'Mobile phase: buffer pH 3.0 : ACN (90:10). Flow 1.0 mL/min, 232 nm. System suitability passed (RSD 0.4%, tailing 1.1).',chem:[{name:'Metformin HCl WRS',grade:'Working standard',lot:'WS-MET-014',exp:'Mar 2027',qty:'50.12 mg'},{name:'Acetonitrile',grade:'HPLC',lot:'ACN-2291',exp:'Jun 2027',qty:'150 mL'}],equip:[{id:'HPLC-02',from:'09:40',to:'13:10'},{id:'BAL-07',from:'09:15',to:'09:30'}],files:[{name:'HPLC_Run_01 – chromatogram',svg:'chrom'}],remarks:'Duplicate injections within limits.',signed:{by:'R. Mehta',at:'—'}}),
+  W('W-0292','REG-0142','RS','R. Mehta','Correction Required',[0.11,0.13],'0.12',{returnNote:'Peak integration of impurity B at RT 6.8 min to be re-checked; attach revised chromatogram.',raw:'Gradient program as per STP-HP-015.',files:[{name:'RS_Run_02 – chromatogram',svg:'chrom'}],signed:null}),
+  W('W-0293','REG-0142','MLT','K. Iyer','Assigned',[],''),
+  W('W-0280','REG-0138','MOIST','S. Patil','Approved',[5.8,6.0,5.9],'5.9'),
+  W('W-0281','REG-0138','PH','A. Kulkarni','Approved',[5.6,5.7],'5.7'),
+  W('W-0282','REG-0138','MLT','M. Shaikh','Approved',[320,280],'300'),
+  W('W-0260','REG-0131','TENS','V. Rao','Approved',[452,448,455],'452'),
+  W('W-0261','REG-0131','HARD','D. Joshi','Approved',[148,152,150],'150'),
+  W('W-0262','REG-0131','OES','P. Nair','Approved',[0.18,0.19],'0.19'),
+  W('W-0240','REG-0125','MOIST','A. Kulkarni','Approved',[0.08,0.09],'0.09'),
+ ];
+ S.stores=[
+  {id:'ST-0118',reg:'REG-0131',sample:'MS Plate IS 2062 E250',cust:'C2',inDate:addDays(TODAY,-5),inBy:'Ganesh Pawar',retVal:30,retUnit:'days',loc:'Rack M-2',actual:null,method:'',by:''},
+  {id:'ST-0112',reg:'REG-0125',sample:'PP Granules – Lot NP-0811',cust:'C3',inDate:addDays(TODAY,-37),inBy:'Ganesh Pawar',retVal:30,retUnit:'days',loc:'Rack G-4',actual:null,method:'',by:''},
+  {id:'ST-0104',reg:'REG-0109',sample:'Sodium Chloride IP',cust:'C1',inDate:addDays(TODAY,-120),inBy:'Ganesh Pawar',retVal:3,retUnit:'months',loc:'Rack P-1',actual:addDays(TODAY,-28),method:'Dissolved & drained after neutralisation',by:'Ganesh Pawar'},
+ ];
+ S.invoices=[
+  {id:'INV-26-0091',reg:'REG-0131',date:addDays(TODAY,-5),items:items(['TENS','HARD','OES'],'MS plate IS 2062 E250',3).map(i=>({...i,desc:TESTS[i.code].name})),discount:5,advance:2000,relax:'none',status:'Issued',signedBy:'Dr. Meera Rao'},
+  {id:'INV-26-0087',reg:'REG-0125',date:addDays(TODAY,-37),items:items(['MOIST'],'').map(i=>({...i,desc:TESTS[i.code].name})),discount:0,advance:0,relax:'none',status:'Dispatched',signedBy:'Dr. Meera Rao'},
+ ];
+ S.dispatch=[
+  {id:'D-0064',reg:'REG-0131',docs:'Test report (hard copy) + Tax invoice',date:addDays(TODAY,-4),by:'Priya Sawant',courier:'DTDC',awb:'D4455667788',rcvDate:null,rcvBy:'',combinedOk:true},
+  {id:'D-0061',reg:'REG-0125',docs:'Test report + Tax invoice',date:addDays(TODAY,-36),by:'Priya Sawant',courier:'Blue Dart',awb:'7788112233',rcvDate:addDays(TODAY,-34),rcvBy:'Mr. Arjun Rao',combinedOk:true},
+ ];
+ S.notes=[
+  {id:1,at:'Today 10:12',to:['analyst','admin'],text:'RS (REG-0142) returned for correction by Dr. Nitin Deshpande.',r:'analyst/W-0292',read:false},
+  {id:2,at:'Today 09:30',to:['secapp','admin'],text:'Assay by HPLC (REG-0142) submitted for review by R. Mehta.',r:'review/W-0291',read:false},
+  {id:3,at:'Today 09:05',to:['regrev','admin'],text:'Pre-registration PRE/26-27/0145 (Paracetamol API) awaiting registration review.',r:'reg/P-0145',read:false},
+  {id:4,at:'Yesterday 17:40',to:['secapp','signatory','admin'],text:'All sections approved for REG-0138 — report ready for preview & release.',r:'report/REG-0138',read:false},
+  {id:5,at:'Yesterday 16:02',to:['secapp','admin'],text:'REG-0144 registered to Chemical & Microbiology — awaiting analyst allocation.',r:'section',read:true},
+  {id:6,at:'Yesterday 16:01',to:['crm','admin'],text:'Registration details for REG-0144 e-mailed to Ms. Kavya Joshi (Greenleaf Agro Foods).',r:'reg/REG-0144',read:true},
+  {id:7,at:'Yesterday 11:20',to:['secapp','crm','admin'],text:'Combined report REG-0142 awaiting completion of Instrumental & Microbiology sections.',r:'report/REG-0142',read:true},
+  {id:8,at:'2 days ago',to:['stores','admin'],text:'Remnant sample of REG-0125 is due for disposal.',r:'stores',read:false},
+ ];
+ S.seq={enq:232,q:114,reg:146,w:310,inv:92,d:65,st:120,n:100};
+ return S;
+}
+let S=seed();
+const cust=id=>S.customers.find(c=>c.id===id);
+const quote=id=>S.quotes.find(q=>q.id===id);
+const reg=id=>S.regs.find(r=>r.id===id);
+const wk=id=>S.work.find(w=>w.id===id);
+const regWork=id=>S.work.filter(w=>w.reg===id);
+const invFor=rid=>S.invoices.find(i=>i.reg===rid);
+const intra=c=>cust(c).state===LAB.state;
+function secProgress(rid){
+  const ws=regWork(rid),out={};
+  ws.forEach(w=>{out[w.section]=out[w.section]||{total:0,approved:0,items:[]};out[w.section].total++;out[w.section].items.push(w);if(w.status==='Approved')out[w.section].approved++});
+  return out;
+}
+const allApproved=rid=>{const ws=regWork(rid);return ws.length>0&&ws.every(w=>w.status==='Approved')};
+function totals(itemsArr,discount,custId,relaxKey='none'){
+  const sub=itemsArr.reduce((a,i)=>a+Number(i.qty||0)*Number(i.rate||0),0);
+  const disc=sub*Number(discount||0)/100, taxable=sub-disc;
+  const relax=RELAX[relaxKey]||RELAX.none, same=intra(custId);
+  const rate=relax.rate===null?18:relax.rate;
+  const cg=same?taxable*rate/200:0, sg=cg, ig=same?0:taxable*rate/100;
+  return {sub,disc,taxable,cg,sg,ig,rate,same,total:taxable+cg+sg+ig};
+}
+function comply(spec,val){
+  const v=parseFloat(val); if(isNaN(v)||!spec) return '';
+  let m;
+  if(m=spec.match(/NMT\s*([\d.]+)/i)) return v<=+m[1]?'Complies':'Does not comply';
+  if(m=spec.match(/Min\.?\s*([\d.]+)/i)) return v>=+m[1]?'Complies':'Does not comply';
+  if(m=spec.match(/([\d.]+)\s*[–-]\s*([\d.]+)/)) return v>=+m[1]&&v<=+m[2]?'Complies':'Does not comply';
+  return '';
+}
+function stats(vals){
+  const v=vals.map(Number).filter(x=>!isNaN(x)&&x!==''); if(!v.length) return null;
+  const avg=v.reduce((a,b)=>a+b,0)/v.length;
+  const sd=v.length>1?Math.sqrt(v.reduce((a,b)=>a+(b-avg)**2,0)/(v.length-1)):0;
+  return {n:v.length,avg,sd,rsd:avg?sd/avg*100:0};
+}
+function storeStatus(s){ if(s.actual) return 'Disposed'; return plannedDisposal(s)<=TODAY?'Due for Disposal':'Retention Active'; }
+const plannedDisposal=s=>s.retUnit==='months'?addMonths(s.inDate,s.retVal):addDays(s.inDate,s.retVal);
+function notify(to,text,r){S.notes.unshift({id:++S.seq.n,at:'Just now',to:[...to,'admin'],text,r,read:false});}
+
+/* ============================ UI PRIMITIVES ============================ */
+const CHIP={ok:['Approved','Accepted','Released','Registered','Received','Closed','Issued','Dispatched','Disposed','Submitted/Dispatched','Delivered','Complies','Complete','Signed'],
+ warn:['Submitted for Review','Internal Review','Due for Disposal','Preview','Pre-Registered','Awaiting Sample','In Discussion','In Transit','Pending'],
+ bad:['Correction Required','Rejected','Expired','Does not comply','Overdue'],
+ info:['In Testing','Sent','Assigned','Quotation Prepared','Retention Active','New','In Store','Ready to dispatch']};
+function chip(s){ if(!s) return ''; const k=Object.keys(CHIP).find(k=>CHIP[k].includes(s)); return `<span class="chip ${k||''}">${esc(s)}</span>`; }
+function stepper(steps,cur,alias={}){
+  let idx=steps.indexOf(alias[cur]||cur); if(idx<0) idx=steps.findIndex(s=>s.split(' / ').includes(cur));
+  const bad=['Correction Required','Rejected','Expired'].includes(cur);
+  return `<ol class="stepper">${steps.map((s,i)=>{const st=i<idx?'done':i===idx?'cur'+(bad?' bad':''):'';const lab=i===idx&&(s.includes(' / ')||alias[cur])?cur:s;return `<li class="${st}"><span class="dot">${i<idx?'✓':i+1}</span><span>${esc(lab)}</span></li>`}).join('')}</ol>`;
+}
+function page(title,sub,actions,body){return `<div class="page-head"><div><h1>${title}</h1>${sub?`<p class="sub">${sub}</p>`:''}</div><div class="actions">${actions||''}</div></div>${body}`}
+const banner=(type,icon,html)=>`<div class="banner ${type}">${ic(icon)}<div>${html}</div></div>`;
+const card=(title,body,right='',flush=false)=>`<div class="card">${title?`<div class="hd"><h2>${title}</h2><div class="row">${right}</div></div>`:''}<div class="bd ${flush?'flush':''}">${body}</div></div>`;
+const table=(heads,rows,empty='Nothing here yet.')=>rows.length?`<div class="table-wrap"><table class="t"><thead><tr>${heads.map(h=>`<th class="${h.startsWith('#')?'num':''}">${h.replace(/^#/,'')}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`:`<div class="empty">${empty}</div>`;
+const secTags=arr=>[...new Set(arr)].map(s=>`<span class="tag sec">${s}</span>`).join(' ');
+function toast(msg){const t=document.createElement('div');t.className='toast';t.innerHTML=msg;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),3800)}
+let modalSave=null;
+function openModal(title,body,saveLabel,onSave){
+  $('#mTitle').textContent=title; $('#mBody').innerHTML=`<form id="mform" onsubmit="return false">${body}</form>`;
+  $('#mFoot').innerHTML=`<button class="btn" data-act="closeModal">Cancel</button>${onSave?`<button class="btn pri" data-act="saveModal">${saveLabel||'Save'}</button>`:''}`;
+  modalSave=onSave; $('#modal').hidden=false; setTimeout(()=>{const f=$('#mBody input:not([type=hidden]),#mBody select');f&&f.focus()},30);
+}
+function closeModal(){$('#modal').hidden=true;modalSave=null}
+const formData=()=>Object.fromEntries(new FormData($('#mform')).entries());
+
+/* ============================ ROUTER ============================ */
+const R={};
+let route='dashboard',param=null,param2=null;
+function go(r){location.hash='#/'+r}
+function parseHash(){const p=(location.hash.replace(/^#\/?/,'')||'dashboard').split('/');route=p[0];param=p[1]||null;param2=p[2]||null}
+const ROUTE_NAV={quote:'quotations',reg:'registration',regnew:'registration',analyst:'analyst',review:'review',report:'reports',invoice:'invoices'};
+function render(){
+  parseHash();
+  const navKey=ROUTE_NAV[route]||route;
+  const fn=R[route]||R.dashboard;
+  let html;
+  if(!navOK(navKey)) html=denied(navKey);
+  else { try{html=fn(param,param2)}catch(e){console.error(e);html=banner('bad','alert','Something went wrong rendering this screen: '+esc(e.message))} }
+  $('#view').innerHTML=html;
+  renderChrome(navKey);
+  document.body.classList.remove('nav-open');
+  if(R[route+'_after']) R[route+'_after'](param);
+}
+function denied(k){
+  const lbl=NAV.flatMap(g=>g.items).find(i=>i[0]===k);
+  return `<div class="card deny">${ic('lock')}<h2 class="mt8">Not available for ${esc(ROLES[ROLE].label)}</h2><p class="muted">The <b>${lbl?lbl[1]:k}</b> screen is hidden for this role as per the approval boundaries in the workflow document. Switch role at the top right to view it.</p><button class="btn pri" data-act="go" data-r="dashboard">Back to dashboard</button></div>`;
+}
+function badgeFor(r){
+  switch(r){
+    case 'enquiries':return S.enquiries.filter(e=>e.status==='New').length;
+    case 'quotations':return S.quotes.filter(q=>['Draft','Internal Review'].includes(q.status)).length;
+    case 'samples':return S.quotes.filter(q=>q.status==='Sent'||(q.status==='Accepted'&&!S.regs.some(x=>x.q===q.id))).length;
+    case 'registration':return S.regs.filter(x=>x.status==='Pre-Registered').length;
+    case 'section':return S.work.filter(w=>w.status==='Unassigned').length;
+    case 'analyst':return S.work.filter(w=>w.analyst===analystUser()&&['Assigned','In Testing','Correction Required'].includes(w.status)).length;
+    case 'review':return S.work.filter(w=>w.status==='Submitted for Review').length;
+    case 'reports':return S.regs.filter(x=>x.report==='Preview').length;
+    case 'dispatch':return S.regs.filter(x=>x.report==='Released').length+S.dispatch.filter(d=>!d.rcvDate).length;
+    case 'stores':return S.stores.filter(s=>storeStatus(s)==='Due for Disposal').length;
+    case 'invoices':return S.invoices.filter(i=>['Draft','Approved'].includes(i.status)).length+S.regs.filter(x=>['Released','Submitted/Dispatched'].includes(x.report)&&!invFor(x.id)).length;
+    case 'notifications':return myNotes().filter(n=>!n.read).length;
+  } return 0;
+}
+const myNotes=()=>S.notes.filter(n=>ROLE==='admin'||n.to.includes(ROLE));
+function renderChrome(active){
+  $('#nav').innerHTML=NAV.map(g=>{const its=g.items.filter(i=>navOK(i[0]));if(!its.length)return'';return `<div class="navgroup"><div>${g.g}</div>${its.map(([r,l,i])=>{const b=badgeFor(r);return `<a href="#/${r}" class="${active===r?'active':''}">${ic(i)}<span>${l}</span>${b?`<span class="cnt">${b}</span>`:''}</a>`}).join('')}</div>`}).join('');
+  const lbl=NAV.flatMap(g=>g.items).find(i=>i[0]===active);
+  $('#crumb').innerHTML=`${esc(LAB.name)} &nbsp;/&nbsp; <b style="color:var(--text)">${lbl?lbl[1]:''}</b>${param?` &nbsp;/&nbsp; ${esc(param)}`:''}`;
+  $('#whoName').textContent=me(); $('#whoRole').textContent=ROLES[ROLE].label; $('#whoAv').textContent=initials(me());
+  const n=myNotes().filter(x=>!x.read).length;
+  $('#bell').innerHTML=ic('bell')+(n?`<span class="badge">${n}</span>`:'');
+}
+
+/* ============================ DASHBOARD ============================ */
+const STAGES=[
+ [1,'Customer query','Phone, mail, walk-in or reference','CRM Desk','enquiries'],
+ [2,'Quotation','Tests, methods, pricing, GST, discount & terms','CRM + Lab HOD','quotations'],
+ [3,'PO & samples','Customer accepts, issues PO, sends samples','Customer / CRM','samples'],
+ [4,'Pre-registration','Against quotation / PO, forward sample','CRM','registration'],
+ [5,'Registration','Verify & register to one or more sections','Registration Reviewer','registration'],
+ [6,'Section allocation','Receive samples & assign analyst(s)','Section Approver','section'],
+ [7,'Testing','Observations, usage, calculations','Section Analyst','analyst'],
+ [8,'Technical review','Verify data; return or approve','Section Reviewer','review'],
+ [9,'Report release','Preview & release test report','Section Approver','reports'],
+ [10,'Customer submission','Combined report coordinated & submitted','CRM / Authorized user','dispatch'],
+ [11,'Retention / disposal','Remnant sample retention & disposal','Stores','stores'],
+ [12,'Invoice & dispatch','Tax invoice, reports & invoice dispatched','Accounts / CRM','invoices'],
+];
+function stageCounts(){
+  const ws=S.work;
+  return [
+   S.enquiries.filter(e=>['New','In Discussion'].includes(e.status)).length,
+   S.quotes.filter(q=>['Draft','Internal Review','Sent'].includes(q.status)).length,
+   S.quotes.filter(q=>q.status==='Accepted'&&!S.regs.some(r=>r.q===q.id)).length,
+   S.regs.filter(r=>r.status==='Pre-Registered').length,
+   S.regs.filter(r=>r.status==='Registered'&&regWork(r.id).some(w=>w.status==='Unassigned')).length,
+   ws.filter(w=>w.status==='Assigned').length,
+   ws.filter(w=>['In Testing','Correction Required'].includes(w.status)).length,
+   ws.filter(w=>w.status==='Submitted for Review').length,
+   S.regs.filter(r=>r.report==='Preview').length,
+   S.regs.filter(r=>r.report==='Released').length,
+   S.stores.filter(s=>!s.actual).length,
+   S.invoices.filter(i=>i.status!=='Dispatched').length,
+  ];
+}
+function tasksFor(role){
+  const t=[];const add=(txt,r,st)=>t.push({txt,r,st});
+  const R_=role==='admin'?null:role;
+  if(!R_||R_==='crm'){S.enquiries.filter(e=>e.status==='New').forEach(e=>add(`Respond to enquiry ${e.id} · ${cust(e.cust).name}`,'enquiries','New'));
+    S.quotes.filter(q=>q.status==='Accepted'&&!S.regs.some(r=>r.q===q.id)).forEach(q=>add(`Pre-register sample for ${q.id}`,'regnew/'+q.id,'Received'));
+    S.regs.filter(r=>r.report==='Released').forEach(r=>add(`Dispatch report ${r.id}`,'dispatch','Ready to dispatch'));}
+  if(!R_||R_==='hod'){S.quotes.filter(q=>q.status==='Internal Review'&&!q.hodOk).forEach(q=>add(`Confirm tests & methods in ${q.id}`,'quote/'+q.id,'Internal Review'));}
+  if(!R_||R_==='signatory'){S.quotes.filter(q=>q.status==='Internal Review'&&q.hodOk).forEach(q=>add(`Authorize quotation ${q.id}`,'quote/'+q.id,'Internal Review'));
+    S.invoices.filter(i=>i.status==='Draft').forEach(i=>add(`Authorize invoice ${i.id}`,'invoice/'+i.id,'Draft'));}
+  if(!R_||R_==='regrev'){S.regs.filter(r=>r.status==='Pre-Registered').forEach(r=>add(`Review pre-registration ${r.pre} · ${r.sample}`,'reg/'+r.id,'Pre-Registered'));}
+  if(!R_||R_==='secapp'){const u=S.work.filter(w=>w.status==='Unassigned').length;if(u)add(`Allocate ${u} unassigned test(s) to analysts`,'section','Pending');
+    S.work.filter(w=>w.status==='Submitted for Review').forEach(w=>add(`Review ${TESTS[w.code].name} · ${w.reg}`,'review/'+w.id,'Submitted for Review'));
+    S.regs.filter(r=>r.report==='Preview').forEach(r=>add(`Preview & release report ${r.id}`,'report/'+r.id,'Preview'));}
+  if(!R_||R_==='analyst'){S.work.filter(w=>w.analyst===analystUser()&&['Assigned','In Testing','Correction Required'].includes(w.status)).forEach(w=>add(`${TESTS[w.code].name} · ${w.reg}`,'analyst/'+w.id,w.status));}
+  if(!R_||R_==='stores'){S.stores.filter(s=>storeStatus(s)==='Due for Disposal').forEach(s=>add(`Dispose remnant of ${s.reg} · ${s.sample}`,'stores','Due for Disposal'));}
+  if(!R_||R_==='accounts'){S.regs.filter(r=>['Released','Submitted/Dispatched'].includes(r.report)&&!invFor(r.id)).forEach(r=>add(`Prepare tax invoice for ${r.id}`,'invoices','Pending'));
+    S.invoices.filter(i=>i.status==='Approved').forEach(i=>add(`Issue invoice ${i.id}`,'invoice/'+i.id,'Approved'));}
+  return t;
+}
+R.dashboard=()=>{
+  const k=[
+   ['Open enquiries',S.enquiries.filter(e=>e.status!=='Closed').length,'enquiries'],
+   ['Quotes awaiting customer',S.quotes.filter(q=>q.status==='Sent').length,'quotations'],
+   ['Registration review pending',S.regs.filter(r=>r.status==='Pre-Registered').length,'registration'],
+   ['Tests in progress',S.work.filter(w=>['Unassigned','Assigned','In Testing','Correction Required'].includes(w.status)).length,'section'],
+   ['Pending technical review',S.work.filter(w=>w.status==='Submitted for Review').length,'review'],
+   ['Reports ready to release',S.regs.filter(r=>r.report==='Preview').length,'reports'],
+   ['Samples due for disposal',S.stores.filter(s=>storeStatus(s)==='Due for Disposal').length,'stores'],
+   ['Invoices to prepare / issue',badgeFor('invoices'),'invoices'],
+  ].filter(x=>navOK(x[2]));
+  const sc=stageCounts();
+  const tasks=tasksFor(ROLE);
+  const secRows=SECTIONS.map(s=>{const ws=S.work.filter(w=>w.section===s);const c=st=>ws.filter(w=>st.includes(w.status)).length;const done=c(['Approved']);
+    return `<tr><td><b>${s}</b><div class="xs muted">${SEC_APPROVER[s]}</div></td><td class="num">${c(['Unassigned'])}</td><td class="num">${c(['Assigned','In Testing'])}</td><td class="num">${c(['Correction Required'])}</td><td class="num">${c(['Submitted for Review'])}</td><td style="min-width:120px"><div class="progress ok"><i style="width:${ws.length?done/ws.length*100:0}%"></i></div><div class="xs muted mt8">${done}/${ws.length} approved</div></td></tr>`});
+  return page(`Good morning, ${esc(me().split(' ')[0]==='Dr.'?me():me().split(' ')[0])}`,`Operational overview for <b>${esc(ROLES[ROLE].label)}</b>. Switch role at the top right to see how each user's view and permissions change.`,
+   `<button class="btn" data-act="go" data-r="flow">${ic('flow')} Workflow map</button>`,
+   `<div class="grid g4">${k.map(([l,v,r])=>`<div class="card kpi" data-act="go" data-r="${r}"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('')}</div>
+   <div class="card mt"><div class="hd"><h2>End-to-end pipeline</h2><span class="small muted">Live count of items at each of the 12 workflow stages · click to open</span></div><div class="bd"><div class="pipeline">${STAGES.map((s,i)=>`<div class="pipe ${sc[i]?'hot':''}" data-act="go" data-r="${navOK(s[4])?s[4]:'flow'}"><div class="n">STAGE ${s[0]}</div><div class="c">${sc[i]}</div><div class="t">${s[1]}</div></div>`).join('')}</div></div></div>
+   <div class="grid g2 mt">
+    ${card('My pending tasks',tasks.length?tasks.slice(0,9).map(t=>`<div class="list-item" style="cursor:pointer" data-act="go" data-r="${t.r}"><div style="flex:1">${esc(t.txt)}</div>${chip(t.st)}</div>`).join(''):'<div class="empty">No pending tasks for this role 🎉</div>',`<span class="tag">${tasks.length}</span>`,true)}
+    ${card('Section workload',table(['Section','#Unassigned','#In testing','#Correction','#In review','Progress'],secRows),'',true)}
+   </div>
+   <div class="mt">${card('Recent notifications',myNotes().slice(0,5).map(n=>`<div class="list-item ${n.read?'read':''}" style="cursor:pointer" data-act="note" data-id="${n.id}"><span class="dotc"></span><div style="flex:1">${esc(n.text)}</div><span class="xs faint">${n.at}</span></div>`).join('')||'<div class="empty">No notifications.</div>',`<a href="#/notifications" class="small">View all</a>`,true)}</div>`);
+};
+
+/* ============================ WORKFLOW MAP ============================ */
+const STATUS_FLOWS=[
+ ['CRM Enquiry',['New','In Discussion','Quotation Prepared','Closed']],
+ ['Quotation',['Draft','Internal Review','Sent','Accepted / Rejected / Expired']],
+ ['Sample',['Awaiting Sample','Received','Pre-Registered','Registered']],
+ ['Section Work',['Assigned','In Testing','Submitted for Review','Correction Required ↺','Approved']],
+ ['Report',['Draft','Preview','Released','Submitted/Dispatched']],
+ ['Sample Retention',['In Store','Retention Active','Due for Disposal','Disposed']],
+ ['Invoice',['Draft','Approved','Issued','Dispatched']],
+];
+R.flow=()=>page('Workflow map','The 12-stage Lucid Labs process as implemented in the software. Each card opens the screen that handles that stage.','',
+ `<div class="flowgrid">${STAGES.map(s=>`<div class="fstage ${s[0]===3?'gate':''}" data-act="go" data-r="${s[4]}"><div class="between"><span class="no">${s[0]}</span>${s[0]===3?'<span class="chip warn">Client gate</span>':ic('arrow','faint')}</div><h3>${s[1]}</h3><p>${s[2]}</p><div class="own"><span class="tag">${s[3]}</span></div></div>`).join('')}</div>
+ <div class="grid g2 mt">
+  ${card('Status flow per module',STATUS_FLOWS.map(([m,st])=>`<div style="margin-bottom:14px"><div class="small" style="font-weight:600;margin-bottom:6px">${m}</div><div class="chain">${st.map((x,i)=>`${i?'<span class="arr">→</span>':''}<span class="node">${x}</span>`).join('')}</div></div>`).join(''))}
+  ${card('Traceability chain (single record, end to end)',[
+   ['Customer','Enquiry','Quotation','PO','Sample Receipt','Pre-Registration','Registration'],
+   ['Registration','Test Group','Section','Analyst Assignment','Observations / Raw Data'],
+   ['Test Data','Review','Approval','Report','Customer Submission / Dispatch'],
+   ['Registration / Sample','Remnant Sample','Retention','Disposal'],
+   ['Quotation / PO / Registration','Final Charges','Tax Invoice','Dispatch']].map(c=>`<div class="chain" style="margin-bottom:12px">${c.map((x,i)=>`${i?'<span class="arr">→</span>':''}<span class="node">${x}</span>`).join('')}</div>`).join('')+
+   banner('info','info','Open any registration (e.g. <a href="#/reg/REG-0131">REG-0131</a>) to see this chain populated for a real record.'))}
+ </div>
+ <div class="mt">${card('Notification rules',table(['Event','Who is notified'],[
+   ['Registration details generated','Customer contact person (e-mail)'],['Sample / test assigned','Assigned analyst'],['Testing submitted for review','Section reviewer / approver'],
+   ['Correction required','Analyst'],['Report ready for release','Authorized users (Section Approver, Signatory)'],['Combined report waiting on another section','CRM & relevant Section Approvers']].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`)),'',true)}</div>`);
+
+/* ============================ CRM ENQUIRIES ============================ */
+let enqFilter='All';
+R.enquiries=()=>{
+  const fl=['All','New','In Discussion','Quotation Prepared','Closed'];
+  const list=S.enquiries.filter(e=>enqFilter==='All'||e.status===enqFilter);
+  const rows=list.map(e=>{const c=cust(e.cust);const q=S.quotes.find(q=>q.enq===e.id);
+   return `<tr><td class="mono">${e.id}</td><td>${fmt(e.date)}</td><td><span class="tag">${e.source}</span></td><td><b>${esc(c.name)}</b><div class="xs muted">${esc(e.contact)} · ${esc(c.gst)}</div></td><td class="small">${esc(e.ref)}</td><td>${secTags(e.tests.map(t=>TESTS[t].section))}<div class="xs muted mt8">${e.tests.length} test(s)</div></td><td>${chip(e.status)}</td>
+   <td>${q?`<a href="#/quote/${q.id}" class="btn sm">${q.id}</a>`:gate('quote.edit',`<button class="btn sm pri" data-act="enqToQuote" data-id="${e.id}">${ic('doc')} Create quotation</button>`)}</td></tr>`});
+  return page('CRM enquiries','All incoming customer queries — phone, mail, walk-in or reference. An enquiry becomes the starting point of the traceability chain.',
+   gate('enq.create',`<button class="btn pri" data-act="newEnquiry">${ic('plus')} New enquiry</button>`),
+   `<div class="card"><div class="hd"><div class="seg">${fl.map(f=>`<button class="${enqFilter===f?'on':''}" data-act="enqFilter" data-v="${f}">${f} <span class="faint">${f==='All'?S.enquiries.length:S.enquiries.filter(e=>e.status===f).length}</span></button>`).join('')}</div></div><div class="bd flush">${table(['Enquiry','Date','Source','Customer / Contact','Query / Project ref.','Required tests','Status',''],rows,'No enquiries in this status.')}</div></div>
+   <div class="grid g3 mt">${S.customers.map(c=>`<div class="card"><div class="bd"><div class="between"><b>${esc(c.name)}</b><span class="tag">${c.id}</span></div><div class="small muted mt8">${esc(c.city)}, ${esc(c.state)} · GSTIN <span class="mono">${c.gst}</span></div><div class="small mt8">${esc(c.contact)} · ${esc(c.phone)}<br>${esc(c.email)}</div></div></div>`).join('')}</div>`);
+};
+function enquiryForm(){
+  const testBoxes=SECTIONS.map(s=>`<div class="full"><div class="xs muted" style="font-weight:600;margin:4px 0">${s.toUpperCase()}</div><div class="checkgrid">${Object.entries(TESTS).filter(([,t])=>t.section===s).map(([k,t])=>`<label><input type="checkbox" name="t_${k}"> ${t.name} <span class="faint xs">${inr(t.rate)}</span></label>`).join('')}</div></div>`).join('');
+  return `<div class="fgrid">
+   <div class="full"><label class="f req"><span>Source of enquiry</span></label><div class="seg mt8" id="srcSeg">${['Phone','Mail','Walk-in','Reference/Other'].map((s,i)=>`<label class="${i?'':'on'}"><input type="radio" name="source" value="${s}" ${i?'':'checked'}>${s}</label>`).join('')}</div></div>
+   <label class="f req"><span>Customer</span><select name="cust" id="custSel">${S.customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}<option value="new">+ New customer…</option></select></label>
+   <label class="f req"><span>Contact person</span><input name="contact" value="${esc(S.customers[0].contact)}" required></label>
+   <div class="full fgrid" id="newCust" style="display:none"><label class="f req"><span>Customer name</span><input name="nname"></label><label class="f"><span>City, State</span><input name="nstate" placeholder="e.g. Pune, Maharashtra"></label><label class="f"><span>Phone</span><input name="nphone"></label><label class="f"><span>E-mail</span><input name="nemail" type="email"></label></div>
+   <label class="f"><span>GST number</span><input name="gst" class="mono" value="${S.customers[0].gst}"></label>
+   <label class="f"><span>Query / project reference</span><input name="ref" placeholder="e.g. Mail dated 28-Sep, project name"></label>
+   <label class="f full"><span>Receipt / courier details (if sample already sent)</span><input name="courier" placeholder="Courier name, AWB / docket no., date"></label>
+   <div class="full"><label class="f req"><span>Required tests</span></label></div>${testBoxes}
+   <label class="f full"><span>Notes</span><textarea name="notes" placeholder="TAT expectations, special instructions…"></textarea></label></div>`;
+}
+
+/* ============================ QUOTATIONS ============================ */
+R.quotations=()=>{
+  const rows=S.quotes.map(q=>{const c=cust(q.cust),t=totals(q.items,q.discount,q.cust);
+   return `<tr class="click" data-act="go" data-r="quote/${q.id}"><td class="mono">${q.id}</td><td>${fmt(q.date)}</td><td><b>${esc(c.name)}</b><div class="xs muted">${q.enq?'From '+q.enq:'Direct'}</div></td><td>${secTags(q.items.map(i=>TESTS[i.code].section))}</td><td class="num">${inr(t.total)}</td><td>${fmt(q.valid)}</td><td>${chip(q.status)}</td><td class="small">${q.po?`<span class="mono">${q.po.no}</span>`:'—'}</td></tr>`});
+  return page('Quotations','Prepared by CRM with Lab HOD input — tests, methods, specifications, pricing, GST and terms, then authorized and sent.',
+   gate('quote.edit',`<button class="btn pri" data-act="newQuote">${ic('plus')} New quotation</button>`),
+   `<div class="card"><div class="bd flush">${table(['Quotation','Date','Customer','Sections','#Total (incl. GST)','Valid till','Status','PO'],rows)}</div></div>`);
+};
+R.quote=(id)=>{
+  const q=quote(id); if(!q) return banner('bad','alert','Quotation not found.');
+  const c=cust(q.cust), t=totals(q.items,q.discount,q.cust);
+  const editable=can('quote.edit')&&(q.status==='Draft'||(q.status==='Internal Review'&&!q.signedBy));
+  const methodEditable=editable||(can('quote.review')&&q.status==='Internal Review');
+  const dis=editable?'':'disabled';
+  const rows=q.items.map((it,i)=>`<tr>
+   <td><input value="${esc(it.desc)}" data-in="qItem" data-i="${i}" data-k="desc" ${dis} placeholder="Item / sample"></td>
+   <td><select data-in="qTest" data-i="${i}" ${dis} style="min-width:170px">${Object.entries(TESTS).map(([k,x])=>`<option value="${k}" ${k===it.code?'selected':''}>${x.name}</option>`).join('')}</select><div class="xs muted mt8">${TESTS[it.code].section}</div></td>
+   <td><input value="${esc(it.method)}" data-in="qItem" data-i="${i}" data-k="method" ${methodEditable?'':'disabled'}></td>
+   <td><input value="${esc(it.spec)}" data-in="qItem" data-i="${i}" data-k="spec" ${methodEditable?'':'disabled'} style="width:110px"></td>
+   <td><input type="number" min="1" value="${it.qty}" data-in="qItem" data-i="${i}" data-k="qty" ${dis} style="width:64px"></td>
+   <td><input type="number" min="0" value="${it.rate}" data-in="qItem" data-i="${i}" data-k="rate" ${dis} style="width:90px"></td>
+   <td class="num" id="qamt${i}">${inr(it.qty*it.rate)}</td>
+   <td>${editable?`<button class="btn sm ghost" data-act="qDel" data-i="${i}" aria-label="Remove">${ic('trash')}</button>`:''}</td></tr>`);
+  let actions='';
+  if(q.status==='Draft') actions=gate('quote.edit',`<button class="btn pri" data-act="qStatus" data-v="Internal Review">Submit for internal review</button>`);
+  if(q.status==='Internal Review'&&!q.hodOk) actions=gate('quote.review',`<button class="btn pri" data-act="qHod">${ic('check')} Confirm tests & methods (HOD)</button>`);
+  if(q.status==='Internal Review'&&q.hodOk) actions=gate('quote.authorize',`<button class="btn pri" data-act="qAuthorize">${ic('sign')} Authorize, sign & send</button>`);
+  if(q.status==='Sent') actions=`${gate('po.record',`<button class="btn" data-act="qStatus" data-v="Rejected">Mark rejected</button>`)}${gate('po.record',`<button class="btn" data-act="qStatus" data-v="Expired">Mark expired</button>`)}${gate('po.record',`<button class="btn pri" data-act="recordPO" data-id="${q.id}">${ic('box')} Customer accepted — record PO</button>`)}`;
+  if(q.status==='Accepted'&&!S.regs.some(r=>r.q===q.id)) actions=gate('reg.pre',`<button class="btn pri" data-act="go" data-r="regnew/${q.id}">${ic('tag')} Pre-register sample</button>`);
+  return page(`Quotation ${q.id}`,`${esc(c.name)} · ${q.enq?`linked to enquiry <a href="#/enquiries">${q.enq}</a>`:'direct quotation'}`,
+   `<button class="btn" data-act="print">${ic('print')} Print / PDF</button>${actions}`,
+   `<div class="card"><div class="bd">${stepper(['Draft','Internal Review','Sent','Accepted / Rejected / Expired'],q.status)}</div></div>
+   ${q.status==='Internal Review'?`<div class="mt">${banner(q.hodOk?'ok':'warn',q.hodOk?'ok':'info',q.hodOk?'Lab HOD has confirmed tests, methods and specifications. Awaiting authorized signatory.':'Awaiting Lab HOD confirmation of tests, methods and specifications. HOD can edit method & specification columns.')}</div>`:''}
+   <div class="split mt">
+    <div class="stack">
+     <div class="card"><div class="hd"><h2>Customer</h2></div><div class="bd"><div class="fgrid c3">
+      <label class="f"><span>Quotation no.</span><input value="${q.id}" readonly class="mono"></label>
+      <label class="f"><span>Quotation date</span><input type="date" value="${q.date}" data-in="qField" data-k="date" ${dis}></label>
+      <label class="f"><span>Valid till</span><input type="date" value="${q.valid}" data-in="qField" data-k="valid" ${dis}></label>
+      <label class="f"><span>Customer</span><select data-in="qCust" ${dis}>${S.customers.map(x=>`<option value="${x.id}" ${x.id===q.cust?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
+      <label class="f"><span>Contact</span><input value="${esc(c.contact)}" readonly></label>
+      <label class="f"><span>GST number</span><input value="${c.gst}" readonly class="mono"></label>
+     </div><div class="small muted mt8">Place of supply: <b>${esc(c.state)}</b> → ${t.same?'intra-state: CGST + SGST':'inter-state: IGST'} (lab state configured as ${LAB.state})</div></div></div>
+     <div class="card"><div class="hd"><h2>Tests, methods & pricing</h2>${editable?`<button class="btn sm" data-act="qAdd">${ic('plus')} Add test</button>`:''}</div><div class="bd flush">${table(['Item / sample','Test','Method','Specification','Qty','Rate (₹)','#Amount',''],rows)}</div></div>
+     <div class="grid g2">
+      ${card('Remarks & terms',`<textarea data-in="qField" data-k="terms" ${dis} style="min-height:120px">${esc(q.terms)}</textarea>`)}
+      ${card('Bank details & authorization',`<dl class="dl"><dt>Bank</dt><dd>${LAB.bank.name}</dd><dt>A/c no.</dt><dd>${LAB.bank.ac}</dd><dt>IFSC</dt><dd>${LAB.bank.ifsc}</dd><dt>Branch</dt><dd>${LAB.bank.branch}</dd></dl><div class="sig mt ${q.signedBy?'done':''}">${q.signedBy?`<b>${ic('sign')} Digitally signed</b><div class="small">${esc(q.signedBy)} · Authorized Signatory</div>`:'<span class="muted small">Authorized signature — applied by the Authorized Signatory after HOD review.</span>'}</div>`)}
+     </div>
+    </div>
+    <div class="card" style="position:sticky;top:76px"><div class="hd"><h2>Summary</h2></div><div class="bd" id="qtotals">${quoteTotalsHTML(q)}</div>
+     ${q.po?`<div class="bd" style="border-top:1px solid var(--border)"><h3 class="mb8">Customer PO</h3><dl class="dl"><dt>PO no.</dt><dd class="mono">${q.po.no}</dd><dt>PO date</dt><dd>${fmt(q.po.date)}</dd><dt>PO value</dt><dd>${inr(q.po.value)}</dd><dt>Sample</dt><dd>${q.receipt?chip('Received')+' '+fmt(q.receipt.date):chip('Awaiting Sample')}</dd></dl></div>`:''}
+    </div>
+   </div>`);
+};
+function quoteTotalsHTML(q){
+  const t=totals(q.items,q.discount,q.cust); const ed=can('quote.edit')&&['Draft','Internal Review'].includes(q.status)&&!q.signedBy;
+  return `<div class="sumrow"><span>Sub-total</span><span>${inr(t.sub)}</span></div>
+  <div class="sumrow"><span class="row">Discount <input type="number" min="0" max="100" value="${q.discount}" data-in="qDisc" style="width:64px;padding:3px 6px" ${ed?'':'disabled'}> %</span><span>− ${inr(t.disc)}</span></div>
+  <div class="sumrow"><span>Taxable value</span><span>${inr(t.taxable)}</span></div>
+  ${t.same?`<div class="sumrow"><span>CGST 9%</span><span>${inr(t.cg)}</span></div><div class="sumrow"><span>SGST 9%</span><span>${inr(t.sg)}</span></div>`:`<div class="sumrow"><span>IGST 18%</span><span>${inr(t.ig)}</span></div>`}
+  <div class="sumrow total"><span>Total</span><span>${inr(t.total)}</span></div>`;
+}
+function refreshQuote(q){q.items.forEach((it,i)=>{const e=$('#qamt'+i);if(e)e.textContent=inr(it.qty*it.rate)});const tt=$('#qtotals');if(tt){const a=document.activeElement&&document.activeElement.dataset.in==='qDisc';if(!a)tt.innerHTML=quoteTotalsHTML(q);else{const t=totals(q.items,q.discount,q.cust);tt.querySelectorAll('.sumrow').forEach((r,i)=>{const v=[t.sub,-t.disc,t.taxable,...(t.same?[t.cg,t.sg]:[t.ig]),t.total][i];if(v!==undefined)r.lastElementChild.textContent=(v<0?'− ':'')+inr(Math.abs(v))})}}}
+
+/* ============================ PO & SAMPLE RECEIPT ============================ */
+R.samples=()=>{
+  const list=S.quotes.filter(q=>['Sent','Accepted'].includes(q.status));
+  const rows=list.map(q=>{const c=cust(q.cust),r=S.regs.find(r=>r.q===q.id);
+   const st=!q.po?'Awaiting Sample':r?(r.status==='Pre-Registered'?'Pre-Registered':'Registered'):'Received';
+   let act='';
+   if(!q.po) act=gate('po.record',`<button class="btn sm pri" data-act="recordPO" data-id="${q.id}">Record PO & receipt</button>`);
+   else if(!r) act=gate('reg.pre',`<button class="btn sm pri" data-act="go" data-r="regnew/${q.id}">Pre-register →</button>`);
+   else act=`<a class="btn sm" href="#/reg/${r.id}">${r.no?r.id:r.pre}</a>`;
+   return `<tr><td><a href="#/quote/${q.id}" class="mono">${q.id}</a></td><td><b>${esc(c.name)}</b></td><td>${q.po?`<span class="mono">${q.po.no}</span><div class="xs muted">${fmt(q.po.date)} · ${inr(q.po.value)}</div>`:'<span class="faint">Not received</span>'}</td><td class="small">${q.receipt?`${fmt(q.receipt.date)} · ${q.receipt.mode}${q.receipt.courier?`<div class="xs muted">${q.receipt.courier} ${q.receipt.awb}</div>`:''}`:'—'}</td><td class="small">${q.receipt?`${q.receipt.count} unit(s) · ${q.receipt.condition}`:'—'}</td><td>${stepper(['Awaiting Sample','Received','Pre-Registered','Registered'],st).replace('class="stepper"','class="stepper" style="min-width:420px"')}</td><td>${act}</td></tr>`});
+  return page('PO & sample receipt','Customer acceptance gate: PO is linked to the quotation and sample receipt is confirmed before any laboratory processing starts.','',
+   `${banner('warn','info','<b>Client approval point:</b> the customer accepts the quotation and issues a PO before sample processing. The system blocks pre-registration until a PO and sample receipt are recorded.')}
+   <div class="card mt"><div class="bd flush">${table(['Quotation','Customer','PO','Sample receipt','Units / condition','Sample status',''],rows)}</div></div>`);
+};
+function poForm(q){
+  const t=totals(q.items,q.discount,q.cust);
+  return `<div class="banner mb8">${ic('info')}<div>Quotation <b>${q.id}</b> · ${esc(cust(q.cust).name)} · quoted value ${inr(t.total)}</div></div>
+  <div class="fgrid mt">
+   <label class="f req"><span>Customer PO number</span><input name="no" required placeholder="e.g. KSI/PO/1002"></label>
+   <label class="f req"><span>PO date</span><input name="date" type="date" value="${TODAY}" required></label>
+   <label class="f"><span>PO value (₹)</span><input name="value" type="number" value="${Math.round(t.total)}"></label>
+   <label class="f"><span>Sample received on</span><input name="rdate" type="date" value="${TODAY}"></label>
+   <label class="f"><span>Receipt mode</span><select name="mode"><option>Courier</option><option>Hand delivery</option><option>Pickup by lab</option></select></label>
+   <label class="f"><span>Courier name</span><input name="courier" placeholder="Blue Dart, DTDC…"></label>
+   <label class="f"><span>AWB / docket no.</span><input name="awb" class="mono"></label>
+   <label class="f"><span>No. of samples / containers</span><input name="count" type="number" value="1" min="1"></label>
+   <label class="f"><span>Sample condition on receipt</span><select name="condition"><option>Intact</option><option>Damaged packaging</option><option>Leaking</option><option>Seal broken</option></select></label>
+   <label class="f"><span>Storage condition</span><select name="storage"><option>Ambient</option><option>2–8 °C</option><option>−20 °C</option></select></label>
+   <label class="full" style="display:flex;gap:8px;font-size:13px"><input type="checkbox" name="confirmed" required> I confirm all required sample(s) for the quoted tests have been received.</label>
+  </div>`;
+}
+
+/* ============================ REGISTRATION ============================ */
+let regTab='All';
+R.registration=()=>{
+  const tabs=['All','Pre-Registered','Registered'];
+  const list=S.regs.filter(r=>regTab==='All'||r.status===regTab);
+  const rows=list.map(r=>{const c=cust(r.cust),p=secProgress(r.id),secs=r.status==='Pre-Registered'?r.tests.map(t=>t.section):Object.keys(p);
+   const tot=regWork(r.id).length,ap=regWork(r.id).filter(w=>w.status==='Approved').length;
+   return `<tr class="click" data-act="go" data-r="reg/${r.id}"><td><span class="mono">${r.no||r.pre}</span><div class="xs muted">${r.no?r.pre:'awaiting number'}</div></td><td><b>${esc(r.sample)}</b><div class="xs muted">${esc(c.name)}</div></td><td><span class="tag">${r.template}</span></td><td>${secTags(secs)}</td><td>${fmt(r.received)}</td><td style="min-width:110px">${r.status==='Registered'?`<div class="progress ok"><i style="width:${tot?ap/tot*100:0}%"></i></div><div class="xs muted mt8">${ap}/${tot} tests approved</div>`:'—'}</td><td>${chip(r.status)}</td><td>${r.status==='Pre-Registered'?gate('reg.approve',`<button class="btn sm pri" data-act="go" data-r="reg/${r.id}">Review</button>`):''}</td></tr>`});
+  const ready=S.quotes.filter(q=>q.status==='Accepted'&&q.po&&!S.regs.some(r=>r.q===q.id));
+  return page('Sample registration','CRM pre-registers against a quotation/PO; the Registration Reviewer verifies it and registers the sample to one or more laboratory sections.',
+   ready.length?gate('reg.pre',`<button class="btn pri" data-act="go" data-r="regnew/${ready[0].id}">${ic('plus')} New pre-registration</button>`):'',
+   `${ready.length?`<div class="mb8">${banner('info','info',`${ready.length} accepted quotation(s) with sample received are ready for pre-registration: ${ready.map(q=>`<a href="#/regnew/${q.id}">${q.id}</a>`).join(', ')}`)}</div>`:''}
+   <div class="card mt"><div class="hd"><div class="seg">${tabs.map(t=>`<button class="${regTab===t?'on':''}" data-act="regTab" data-v="${t}">${t==='Pre-Registered'?'Pending review':t} <span class="faint">${t==='All'?S.regs.length:S.regs.filter(r=>r.status===t).length}</span></button>`).join('')}</div></div><div class="bd flush">${table(['Registration no.','Sample / customer','Template','Sections','Received','Progress','Status',''],rows)}</div></div>`);
+};
+let DRAFT=null;
+R.regnew=(qid)=>{
+  const q=quote(qid); if(!q) return banner('bad','alert','Quotation not found.');
+  if(!q.po) return banner('warn','alert',`PO and sample receipt must be recorded for ${q.id} before pre-registration. <a href="#/samples">Go to PO & sample receipt</a>`);
+  if(!DRAFT||DRAFT.q!==qid) DRAFT={q:qid,template:TESTS[q.items[0].code].section==='Mechanical'?'Mech':q.cust==='C1'?'Pharma':'Gen',sample:q.items[0].desc,qty:'',fields:{},tests:[],tat:'Normal',delivery:'E-mail + hard copy'};
+  const c=cust(q.cust),T=TEMPLATES[DRAFT.template];
+  const trows=DRAFT.tests.map((t,i)=>`<tr><td><b>${TESTS[t.code].name}</b></td><td><input value="${esc(t.method)}" data-in="dTest" data-i="${i}" data-k="method"></td><td><input value="${esc(t.spec)}" data-in="dTest" data-i="${i}" data-k="spec" style="width:110px"></td><td><select data-in="dTest" data-i="${i}" data-k="section">${SECTIONS.map(s=>`<option ${s===t.section?'selected':''}>${s}</option>`).join('')}</select></td><td><button class="btn sm ghost" data-act="dDel" data-i="${i}" aria-label="Remove">${ic('trash')}</button></td></tr>`);
+  return page('New pre-registration',`Against quotation <a href="#/quote/${q.id}">${q.id}</a> · PO <span class="mono">${q.po.no}</span> · ${esc(c.name)}`,
+   `<button class="btn" data-act="go" data-r="registration">Cancel</button><button class="btn pri" data-act="submitPre">${ic('arrow')} Submit for registration review</button>`,
+   `<div class="card"><div class="bd">${stepper(['Awaiting Sample','Received','Pre-Registered','Registered'],'Received')}</div></div>
+   <div class="split mt"><div class="stack">
+    <div class="card"><div class="hd"><h2>Registration template</h2><div class="seg">${Object.keys(TEMPLATES).map(k=>`<button class="${DRAFT.template===k?'on':''}" data-act="dTpl" data-v="${k}">${k==='Mech'?'Mech':k}</button>`).join('')}</div></div>
+     <div class="bd"><div class="small muted mb8">${T.desc}</div><div class="fgrid">
+      <label class="f req"><span>Sample name</span><input value="${esc(DRAFT.sample)}" data-in="dField" data-k="sample"></label>
+      <label class="f"><span>Quantity received</span><input value="${esc(DRAFT.qty)}" data-in="dField" data-k="qty" placeholder="e.g. 500 g / 3 specimens"></label>
+      ${T.fields.map(f=>`<label class="f"><span>${f}</span><input value="${esc(DRAFT.fields[f]||'')}" data-in="dTplField" data-k="${esc(f)}"></label>`).join('')}
+      <label class="f"><span>TAT</span><select data-in="dField" data-k="tat"><option ${DRAFT.tat==='Normal'?'selected':''}>Normal</option><option ${DRAFT.tat==='Urgent'?'selected':''}>Urgent</option></select></label>
+      <label class="f"><span>Report delivery</span><select data-in="dField" data-k="delivery"><option>E-mail + hard copy</option><option>E-mail only</option><option>Hard copy only</option></select></label>
+     </div></div></div>
+    <div class="card"><div class="hd"><h2>Test group</h2><div class="row"><button class="btn sm" data-act="dCopy">${ic('copy')} Copy tests from quotation</button><select data-act-change="dAddTest" style="width:auto"><option value="">+ Add test…</option>${Object.entries(TESTS).map(([k,t])=>`<option value="${k}">${t.name}</option>`).join('')}</select></div></div>
+     <div class="bd flush">${table(['Test','Method','Specification','Section',''],trows,'No tests yet — use “Copy tests from quotation”.')}</div></div>
+   </div>
+   <div class="stack" style="position:sticky;top:76px">
+    ${card('Linked records',`<dl class="dl"><dt>Customer</dt><dd>${esc(c.name)}</dd><dt>Contact</dt><dd>${esc(c.contact)}</dd><dt>Quotation</dt><dd class="mono">${q.id}</dd><dt>PO</dt><dd class="mono">${q.po.no}</dd><dt>Received</dt><dd>${fmt(q.receipt.date)} · ${q.receipt.mode}</dd><dt>Condition</dt><dd>${q.receipt.condition} · ${q.receipt.storage}</dd></dl>`)}
+    ${card('Section routing',DRAFT.tests.length?`<div class="small muted mb8">This sample will be forwarded to:</div>${[...new Set(DRAFT.tests.map(t=>t.section))].map(s=>`<div class="between" style="padding:5px 0"><span class="tag sec">${s}</span><span class="small">${DRAFT.tests.filter(t=>t.section===s).length} test(s)</span></div>`).join('')}`:'<div class="small muted">Add tests to see routing.</div>')}
+   </div></div>`);
+};
+R.reg=(id)=>{
+  const r=reg(id); if(!r) return banner('bad','alert','Registration not found.');
+  const q=quote(r.q),c=cust(r.cust),e=q.enq?S.enquiries.find(x=>x.id===q.enq):null;
+  const inv=invFor(r.id),disp=S.dispatch.find(d=>d.reg===r.id),st=S.stores.find(s=>s.reg===r.id);
+  const fieldsDL=`<dl class="dl">${Object.entries(r.fields).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}<dt>Quantity</dt><dd>${esc(r.qty||'—')}</dd></dl>`;
+  if(r.status==='Pre-Registered'){
+    const ed=can('test.editMethod');
+    const trows=r.tests.map((t,i)=>`<tr><td><b>${TESTS[t.code].name}</b></td><td><input value="${esc(t.method)}" data-in="rTest" data-i="${i}" data-k="method" ${ed?'':'disabled'}></td><td><input value="${esc(t.spec)}" data-in="rTest" data-i="${i}" data-k="spec" ${ed?'':'disabled'} style="width:110px"></td><td><select data-in="rTest" data-i="${i}" data-k="section" ${ed?'':'disabled'}>${SECTIONS.map(s=>`<option ${s===t.section?'selected':''}>${s}</option>`).join('')}</select></td></tr>`);
+    const secs=[...new Set(r.tests.map(t=>t.section))];
+    return page(`Registration review · ${r.pre}`,`${esc(r.sample)} · ${esc(c.name)} · template <b>${r.template}</b>`,
+     `${gate('reg.approve',`<button class="btn" data-act="regReturn" data-id="${r.id}">${ic('undo')} Return to CRM</button>`)}${gate('reg.approve',`<button class="btn pri" data-act="regApprove" data-id="${r.id}">${ic('check')} Approve & register to ${secs.length} section(s)</button>`)}`,
+     `<div class="card"><div class="bd">${stepper(['Awaiting Sample','Received','Pre-Registered','Registered'],'Pre-Registered')}</div></div>
+     <div class="split mt"><div class="stack">
+      ${card('Test group — verify tests & methods',table(['Test','Method','Specification','Section'],trows),ed?'<span class="small muted">Editable (authorized)</span>':'<span class="small muted">Read-only</span>',true)}
+      ${card('Sample details ('+r.template+' template)',fieldsDL)}
+     </div><div class="stack">
+      ${card('On approval the system will',`<ol class="small" style="margin:0;padding-left:18px;line-height:1.8"><li>Generate a unique registration number</li><li>Register sample to ${secs.map(s=>`<span class="tag sec">${s}</span>`).join(' ')}</li><li>Notify each Section Approver</li><li>E-mail registration details to <b>${esc(c.contact)}</b> (${esc(c.email)})</li></ol>`)}
+      ${card('Linked records',`<dl class="dl"><dt>Quotation</dt><dd><a href="#/quote/${q.id}">${q.id}</a></dd><dt>PO</dt><dd class="mono">${q.po.no}</dd><dt>Received</dt><dd>${fmt(r.received)}</dd><dt>Pre-registered by</dt><dd>Priya Sawant (CRM)</dd></dl>`)}
+     </div></div>`);
+  }
+  const prog=secProgress(r.id);
+  const chainNodes=[
+   ['Customer',c.name,true],['Enquiry',e?e.id:'Direct',!!e||true],['Quotation',q.id,true],['PO',q.po?.no,!!q.po],['Sample receipt',fmt(q.receipt?.date),!!q.receipt],['Pre-registration',r.pre,true],['Registration',r.no,true],
+   ['Testing',`${regWork(r.id).filter(w=>w.status==='Approved').length}/${regWork(r.id).length} approved`,allApproved(r.id)],['Report',r.report,['Released','Submitted/Dispatched'].includes(r.report)],['Dispatch',disp?disp.id:'—',!!disp],['Stores',st?storeStatus(st):'—',!!st],['Invoice',inv?inv.id:'—',!!inv]];
+  const firstOpen=chainNodes.findIndex(n=>!n[2]);
+  return page(`${r.no}`,`${esc(r.sample)} · ${esc(c.name)} · template <b>${r.template}</b> · registered ${fmt(r.regDate)}`,
+   `<a class="btn" href="#/report/${r.id}">${ic('file')} Report</a>`,
+   `${card('Traceability',`<div class="chain">${chainNodes.map((n,i)=>`${i?'<span class="arr">→</span>':''}<span class="node ${n[2]?'done':i===firstOpen?'cur':''}" title="${esc(n[1])}">${n[0]}<span class="xs" style="font-weight:400;display:block">${esc(n[1]||'')}</span></span>`).join('')}</div>`)}
+   <div class="split mt"><div class="stack">
+    ${Object.entries(prog).map(([s,p])=>card(`<span class="tag sec">${s}</span> &nbsp;${p.approved}/${p.total} approved`,table(['Test','Method','Analyst','Result','Status'],p.items.map(w=>`<tr><td><b>${TESTS[w.code].name}</b></td><td class="small">${esc(w.method)}</td><td>${w.analyst||'<span class="faint">Unassigned</span>'}</td><td>${w.result?`${esc(w.result)} ${w.unit}`:'—'}</td><td>${chip(w.status)}</td></tr>`)),`<span class="small muted">Approver: ${SEC_APPROVER[s]}</span>`,true)).join('')}
+   </div><div class="stack">
+    ${card('Sample details',fieldsDL)}
+    ${card('Working data retention',`<div class="small">Raw data, observation sheets, images, chemical/standard & equipment usage, calculations and signatures for all tests are retained against this registration. <b>Only final results</b> appear in the customer report.</div>`)}
+   </div></div>`);
+};
+
+/* ============================ SECTION WORKBENCH ============================ */
+let SEC='Chemical',secSel=new Set();
+R.section=()=>{
+  const ws=S.work.filter(w=>w.section===SEC&&reg(w.reg).status==='Registered');
+  const rows=ws.map(w=>{const r=reg(w.reg);const un=w.status==='Unassigned';
+   return `<tr><td>${un?`<input type="checkbox" data-act="secPick" data-id="${w.id}" ${secSel.has(w.id)?'checked':''} aria-label="Select">`:''}</td><td><a href="#/reg/${r.id}" class="mono">${r.id}</a><div class="xs muted">${fmt(r.regDate)}</div></td><td><b>${esc(r.sample)}</b><div class="xs muted">${esc(cust(r.cust).name)}</div></td><td>${TESTS[w.code].name}<div class="xs muted">${esc(w.method)}</div></td><td>${fmt(r.tat)}</td><td>${w.analyst||'<span class="faint">—</span>'}</td><td>${chip(w.status)}</td><td class="row" style="flex-wrap:nowrap">${gate('test.editMethod',`<button class="btn sm" data-act="editMethod" data-id="${w.id}">Edit method</button>`)}${!un&&w.status!=='Approved'?gate('sec.assign',`<button class="btn sm ghost" data-act="reassign" data-id="${w.id}">Reassign</button>`):''}</td></tr>`});
+  return page('Section workbench','Section Approver receives registered samples for the section and allocates the work to one or multiple analysts.','',
+   `<div class="card"><div class="hd"><div class="seg">${SECTIONS.map(s=>{const n=S.work.filter(w=>w.section===s&&w.status==='Unassigned').length;return `<button class="${SEC===s?'on':''}" data-act="secTab" data-v="${s}">${s}${n?` <span class="chip warn" style="padding:0 6px">${n}</span>`:''}</button>`}).join('')}</div><span class="small muted">Section approver: <b>${SEC_APPROVER[SEC]}</b></span></div>
+    <div class="bd" style="border-bottom:1px solid var(--border);background:var(--panel2)"><div class="row"><span class="small"><b id="selCount">${secSel.size}</b> selected</span><select id="assignTo" style="width:auto">${ANALYSTS[SEC].map(a=>`<option>${a}</option>`).join('')}</select>${gate('sec.assign',`<button class="btn pri sm" data-act="assign">${ic('users')} Assign selected</button>`)}<span class="xs muted">The analyst receives an in-system notification.</span></div></div>
+    <div class="bd flush">${table(['','Registration','Sample','Test / method','TAT due','Analyst','Status',''],rows,'No work in this section.')}</div></div>
+   <div class="grid g2 mt">${ANALYSTS[SEC].map(a=>{const mine=S.work.filter(w=>w.analyst===a);return card(a,`<div class="row">${['Assigned','In Testing','Correction Required','Submitted for Review','Approved'].map(s=>`<span class="small">${chip(s)} ${mine.filter(w=>w.status===s).length}</span>`).join('')}</div>`)}).join('')}</div>`);
+};
+
+/* ============================ ANALYST WORKBENCH ============================ */
+let ANALYST_AS='R. Mehta';
+const analystUser=()=>ROLE==='analyst'?me():ANALYST_AS;
+R.analyst=(wid)=>{
+  if(wid) return analystWork(wk(wid));
+  const u=analystUser(); const mine=S.work.filter(w=>w.analyst===u);
+  const rows=mine.map(w=>{const r=reg(w.reg);return `<tr class="click" data-act="go" data-r="analyst/${w.id}"><td class="mono">${w.id}</td><td><span class="mono">${r.id}</span><div class="xs muted">${esc(r.sample)}</div></td><td><b>${TESTS[w.code].name}</b><div class="xs muted">${esc(w.method)}</div></td><td>${fmt(r.tat)}</td><td>${w.result?`${esc(w.result)} ${w.unit}`:'—'}</td><td>${chip(w.status)}</td></tr>`});
+  const all=Object.values(ANALYSTS).flat();
+  return page('Analyst workbench',`Test assignments for <b>${esc(u)}</b>. Open a test to record observations, instrument data, usage, calculations and signature.`,
+   ROLE==='analyst'?'':`<label class="row small">Viewing as <select data-act-change="analystAs" style="width:auto">${all.map(a=>`<option ${a===u?'selected':''}>${a}</option>`).join('')}</select></label>`,
+   `<div class="grid g4">${['Assigned','In Testing','Correction Required','Submitted for Review'].map(s=>`<div class="card kpi"><div class="l">${s}</div><div class="v">${mine.filter(w=>w.status===s).length}</div></div>`).join('')}</div>
+   <div class="card mt"><div class="bd flush">${table(['Work ID','Registration','Test','TAT due','Result','Status'],rows,'No assignments for this analyst.')}</div></div>`);
+};
+function analystWork(w){
+  if(!w) return banner('bad','alert','Assignment not found.');
+  const r=reg(w.reg),t=TESTS[w.code],F=FORMULAS[w.code];
+  const locked=!can('test.enter')||['Submitted for Review','Approved'].includes(w.status);
+  const dis=locked?'disabled':'';
+  const st=stats(w.values);
+  const comp=comply(w.spec,w.result);
+  if(F&&!Object.keys(w.calc).length) F.vars.forEach(([k,,d])=>w.calc[k]=d);
+  const calcRes=F?F.fn(w.calc):st?st.avg:null;
+  const valInputs=Array.from({length:w.reps},(_,i)=>`<label class="f"><span>Value ${i+1}</span><input type="number" step="any" value="${w.values[i]??''}" data-in="wVal" data-i="${i}" ${dis}></label>`).join('');
+  return page(`${t.name}`,`${w.id} · <a href="#/reg/${r.id}">${r.no}</a> · ${esc(r.sample)} · ${esc(cust(r.cust).name)}`,
+   locked?`<span class="small muted">${ic('lock')} ${w.status==='Approved'?'Approved — read only':can('test.enter')?'Submitted — read only':'Read only for your role'}</span>`:`<button class="btn" data-act="wSave">Save draft</button><button class="btn pri" data-act="wSubmit">${ic('arrow')} Submit for review</button>`,
+   `<div class="card"><div class="bd">${stepper(['Assigned','In Testing','Submitted for Review','Approved'],w.status,{'Correction Required':'In Testing'})}</div></div>
+   ${w.status==='Correction Required'?`<div class="mt">${banner('bad','undo',`<b>Returned for correction</b> by ${SEC_APPROVER[w.section]}: “${esc(w.returnNote)}”`)}</div>`:''}
+   <div class="mt">${banner('info','info','<b>Data rule:</b> only the <b>final result</b> is carried into the customer report. All other working data on this screen is retained against registration '+r.no+'.')}</div>
+   <div class="split mt"><div class="card"><div class="tabs" role="tablist">${['Observations','Instrument data','Chemicals & standards','Equipment','Calculation & result','Remarks & signature'].map((x,i)=>`<button class="${i===0?'on':''}" data-act="tab" data-i="${i}">${x}</button>`).join('')}</div>
+    <div class="tabpane on">
+     <div class="between mb8"><h3>Reading sheet — replicate values</h3><label class="row small">Replicates <select data-in="wReps" ${dis} style="width:auto">${[1,2,3,4,5].map(n=>`<option ${n===w.reps?'selected':''}>${n}</option>`).join('')}</select></label></div>
+     <div class="fgrid c3">${valInputs}</div>
+     <div class="grid g4 mt" id="statsbox">${statsHTML(w)}</div>
+     <label class="f mt"><span>Raw data / observations</span><textarea data-in="wField" data-k="raw" ${dis} placeholder="Instrument conditions, observations, system suitability…">${esc(w.raw)}</textarea></label>
+    </div>
+    <div class="tabpane">
+     <label class="drop ${locked?'locked':''}">${ic('upload')}<div class="mt8"><b>Upload images, peaks or graphs</b></div><div class="small">Copied from instrument PC — PNG, JPG, PDF exports</div><input type="file" accept="image/*" multiple data-act-change="wFiles" ${dis} hidden></label>
+     <div class="thumbs">${w.files.map(f=>`<div class="thumb"><div class="img">${f.svg?chromSVG():`<img src="${f.url}" alt="">`}</div><div class="cap"><span>${esc(f.name)}</span></div></div>`).join('')||'<div class="small muted">No attachments yet.</div>'}</div>
+    </div>
+    <div class="tabpane">${usageTable(w,'chem',['name','grade','lot','exp','qty'],['Chemical / standard','Grade','Lot no.','Expiry','Qty used'],locked)}</div>
+    <div class="tabpane">${equipTable(w,locked)}</div>
+    <div class="tabpane">
+     <div class="card" style="background:var(--panel2)"><div class="bd"><div class="small muted">Formula applied</div><div style="font-size:16px;font-weight:600;margin-top:4px">${F?F.expr:'Result = Average of replicate values'}</div></div></div>
+     ${F?`<div class="fgrid c3 mt">${F.vars.map(([k,l])=>`<label class="f"><span>${l}</span><input type="number" step="any" value="${w.calc[k]}" data-in="wCalc" data-k="${k}" ${dis}></label>`).join('')}</div>`:''}
+     <div class="between mt"><div>Calculated: <b id="calcOut" style="font-size:18px">${calcRes!=null?round(calcRes,2):'—'}</b> ${t.unit}</div>${locked?'':`<button class="btn" data-act="wApplyCalc">Use as final result</button>`}</div>
+     <div class="fgrid mt">
+      <label class="f req"><span>Final result (goes to report)</span><input value="${esc(w.result)}" data-in="wField" data-k="result" ${dis} style="font-weight:700;font-size:15px"></label>
+      <label class="f"><span>Unit</span><input value="${esc(w.unit)}" readonly></label>
+      <label class="f"><span>Specification</span><input value="${esc(w.spec)}" readonly></label>
+      <div class="f"><span class="small muted" style="font-weight:600">Compliance</span><div class="mt8" id="compOut">${chip(comp)||'<span class="faint small">Enter result</span>'}</div></div>
+     </div>
+    </div>
+    <div class="tabpane">
+     <label class="f"><span>Test remarks / comments</span><textarea data-in="wField" data-k="remarks" ${dis}>${esc(w.remarks)}</textarea></label>
+     <div class="sig mt ${w.signed?'done':''}">${w.signed?`<b>${ic('sign')} Signed by ${esc(w.signed.by)}</b><div class="small">${w.signed.at}</div>`:`<div class="between"><span class="small muted">Analyst e-signature is required before submission.</span>${locked?'':`<button class="btn pri sm" data-act="wSign">${ic('sign')} Sign as ${esc(me())}</button>`}</div>`}</div>
+    </div>
+   </div>
+   <div class="stack" style="position:sticky;top:76px">
+    ${card('Test details',`<dl class="dl"><dt>Registration</dt><dd class="mono">${r.no}</dd><dt>Section</dt><dd>${w.section}</dd><dt>Method</dt><dd>${esc(w.method)}</dd><dt>Specification</dt><dd>${esc(w.spec)} ${t.unit}</dd><dt>Analyst</dt><dd>${esc(w.analyst)}</dd><dt>TAT due</dt><dd>${fmt(r.tat)}</dd><dt>NABL scope</dt><dd>${t.nabl?'Yes':'No'}</dd></dl>`)}
+    ${card('Submission checklist',[['Replicate values entered',st&&st.n>=1],['Final result entered',!!w.result],['Instrument data attached',w.files.length>0||!['ASSAY','RS','OES','HM'].includes(w.code)],['Equipment usage recorded',w.equip.length>0],['Analyst signature',!!w.signed]].map(([l,ok])=>`<div class="between" style="padding:4px 0"><span class="small">${l}</span>${ok?'<span class="chip ok">Done</span>':'<span class="chip">Pending</span>'}</div>`).join(''))}
+   </div></div>`);
+}
+function statsHTML(w){const s=stats(w.values);return [['Readings',s?s.n:'—'],['Average',s?round(s.avg,3):'—'],['Std. dev.',s?round(s.sd,4):'—'],['% RSD',s?round(s.rsd,2):'—']].map(([l,v])=>`<div class="card" style="padding:10px 12px;background:var(--panel2)"><div class="xs muted">${l}</div><div style="font-weight:650;font-size:17px">${v}</div></div>`).join('')}
+function usageTable(w,key,cols,heads,locked){
+  const rows=w[key].map((x,i)=>`<tr>${cols.map(c=>`<td><input value="${esc(x[c]||'')}" data-in="wRow" data-t="${key}" data-i="${i}" data-k="${c}" ${locked?'disabled':''}></td>`).join('')}<td>${locked?'':`<button class="btn sm ghost" data-act="wRowDel" data-t="${key}" data-i="${i}" aria-label="Remove">${ic('trash')}</button>`}</td></tr>`);
+  return `<div class="between mb8"><h3>Chemical & standard usage</h3>${locked?'':`<button class="btn sm" data-act="wRowAdd" data-t="${key}">${ic('plus')} Add row</button>`}</div>${table([...heads,''],rows,'No chemicals / standards recorded.')}`;
+}
+function equipTable(w,locked){
+  const rows=w.equip.map((x,i)=>{const e=EQUIP.find(e=>e[0]===x.id)||['','',''];return `<tr><td><select data-in="wRow" data-t="equip" data-i="${i}" data-k="id" ${locked?'disabled':''}>${EQUIP.map(q=>`<option value="${q[0]}" ${q[0]===x.id?'selected':''}>${q[0]} · ${q[1]}</option>`).join('')}</select></td><td class="small">${e[2]}</td><td><input type="time" value="${x.from||''}" data-in="wRow" data-t="equip" data-i="${i}" data-k="from" ${locked?'disabled':''}></td><td><input type="time" value="${x.to||''}" data-in="wRow" data-t="equip" data-i="${i}" data-k="to" ${locked?'disabled':''}></td><td>${locked?'':`<button class="btn sm ghost" data-act="wRowDel" data-t="equip" data-i="${i}" aria-label="Remove">${ic('trash')}</button>`}</td></tr>`});
+  return `<div class="between mb8"><h3>Equipment usage</h3>${locked?'':`<button class="btn sm" data-act="wRowAdd" data-t="equip">${ic('plus')} Add equipment</button>`}</div>${table(['Equipment','Calibration due','Start','End',''],rows,'No equipment usage recorded.')}<div class="xs muted mt8">Equipment with expired calibration will be blocked from selection (master data rule).</div>`;
+}
+function chromSVG(w=300,h=120,peaks=[[1.6,22,.07],[3.4,100,.09],[5.2,12,.08],[6.8,34,.1]]){
+  let d='';for(let x=0;x<=8;x+=.04){let y=2+Math.sin(x*3)*0.6;peaks.forEach(([m,a,s])=>y+=a*Math.exp(-((x-m)**2)/(2*s*s)));d+=`${x?'L':'M'}${(x/8*(w-30)+24).toFixed(1)} ${(h-18-y*(h-30)/105).toFixed(1)}`}
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" role="img" aria-label="Chromatogram"><path d="M24 8V${h-18}H${w-6}" fill="none" stroke="currentColor" stroke-opacity=".4"/><path d="${d}" fill="none" stroke="#0d8a84" stroke-width="1.4"/>${peaks.map(([m,a])=>`<text x="${(m/8*(w-30)+24).toFixed(0)}" y="${(h-22-a*(h-30)/105).toFixed(0)}" font-size="8" text-anchor="middle" fill="currentColor">${m.toFixed(1)}</text>`).join('')}<text x="${w-6}" y="${h-5}" font-size="8" text-anchor="end" fill="currentColor" opacity=".6">min</text><text x="4" y="12" font-size="8" fill="currentColor" opacity=".6">mAU</text></svg>`;
+}
+
+/* ============================ REVIEW & APPROVAL ============================ */
+R.review=(wid)=>{
+  if(wid) return reviewDetail(wk(wid));
+  const pend=S.work.filter(w=>w.status==='Submitted for Review');
+  const hist=S.work.filter(w=>['Approved','Correction Required'].includes(w.status)&&w.reviewedBy).slice(0,8);
+  const row=w=>{const r=reg(w.reg);return `<tr class="click" data-act="go" data-r="review/${w.id}"><td><span class="mono">${r.id}</span><div class="xs muted">${esc(r.sample)}</div></td><td><b>${TESTS[w.code].name}</b></td><td><span class="tag sec">${w.section}</span></td><td>${esc(w.analyst)}</td><td>${w.result} ${w.unit} ${chip(comply(w.spec,w.result))}</td><td>${chip(w.status)}</td></tr>`};
+  return page('Review & approval','Section Reviewer / Approver verifies observations, calculations, attachments, usage and final result — then approves or returns to the analyst.','',
+   `${card(`Pending review <span class="tag">${pend.length}</span>`,table(['Registration','Test','Section','Analyst','Result','Status'],pend.map(row),'Nothing waiting for review.'),'',true)}
+   <div class="mt">${card('Recently reviewed',table(['Registration','Test','Section','Analyst','Result','Status'],S.work.filter(w=>w.status==='Correction Required').concat(S.work.filter(w=>w.status==='Approved').slice(0,6)).map(row)),'',true)}</div>`);
+};
+function reviewDetail(w){
+  if(!w) return banner('bad','alert','Item not found.');
+  const r=reg(w.reg),t=TESTS[w.code],s=stats(w.values);
+  const active=w.status==='Submitted for Review'&&can('test.review');
+  const checks=['Observations & raw data verified','Calculations verified','Attachments / images / peaks verified','Equipment & chemical / standard details verified','Final result verified against specification'];
+  return page(`Review · ${t.name}`,`${w.id} · <a href="#/reg/${r.id}">${r.no}</a> · analyst ${esc(w.analyst)}`,
+   active?`<button class="btn danger" data-act="rvReturn">${ic('undo')} Return for correction</button><button class="btn ok" data-act="rvApprove">${ic('check')} Approve data</button>`:`<span class="small muted">${ic('lock')} ${w.status==='Submitted for Review'?'Only reviewers/approvers can act here':'Review completed'}</span>`,
+   `<div class="card"><div class="bd">${stepper(['Assigned','In Testing','Submitted for Review','Approved'],w.status,{'Correction Required':'In Testing'})}</div></div>
+   <div class="split mt"><div class="stack">
+    ${card('Result',`<div class="grid g4"><div><div class="xs muted">Final result</div><div style="font-size:22px;font-weight:700">${esc(w.result||'—')} <span class="small">${t.unit}</span></div></div><div><div class="xs muted">Specification</div><div style="font-weight:600;margin-top:4px">${esc(w.spec)}</div></div><div><div class="xs muted">Compliance</div><div class="mt8">${chip(comply(w.spec,w.result))}</div></div><div><div class="xs muted">Replicates · %RSD</div><div style="font-weight:600;margin-top:4px">${w.values.join(', ')||'—'} · ${s?round(s.rsd,2):'—'}</div></div></div>`)}
+    ${card('Raw data & observations',`<div class="small">${esc(w.raw)||'<span class="faint">None recorded</span>'}</div>${w.files.length?`<div class="thumbs">${w.files.map(f=>`<div class="thumb"><div class="img">${f.svg?chromSVG():`<img src="${f.url}" alt="">`}</div><div class="cap">${esc(f.name)}</div></div>`).join('')}</div>`:''}`)}
+    <div class="grid g2">${card('Chemicals & standards',table(['Name','Lot','Qty'],w.chem.map(c=>`<tr><td>${esc(c.name)}</td><td class="mono">${esc(c.lot)}</td><td>${esc(c.qty)}</td></tr>`),'None recorded'),'',true)}${card('Equipment',table(['ID','Name','Used'],w.equip.map(e=>{const q=EQUIP.find(x=>x[0]===e.id)||[];return `<tr><td class="mono">${e.id}</td><td class="small">${q[1]||''}</td><td class="small">${e.from}–${e.to}</td></tr>`}),'None recorded'),'',true)}</div>
+    ${card('Remarks & signature',`<div class="small">${esc(w.remarks)||'<span class="faint">No remarks</span>'}</div><div class="sig mt ${w.signed?'done':''}">${w.signed?`<b>Signed by ${esc(w.signed.by)}</b> <span class="small">${w.signed.at}</span>`:'<span class="small muted">Not signed</span>'}</div>`)}
+   </div><div class="stack" style="position:sticky;top:76px">
+    ${card('Verification checklist',checks.map((c,i)=>`<label style="display:flex;gap:8px;padding:5px 0;font-size:13px"><input type="checkbox" class="rvchk" ${active?'':'disabled'} ${w.status==='Approved'?'checked':''}> ${c}</label>`).join('')+`<label class="f mt"><span>Reviewer comment ${active?'(required when returning)':''}</span><textarea id="rvNote" ${active?'':'disabled'}>${esc(w.status==='Correction Required'?w.returnNote:w.reviewNote)}</textarea></label>${w.reviewedBy&&!active?`<div class="small muted mt8">Reviewed by ${esc(w.reviewedBy)}</div>`:''}`)}
+   </div></div>`);
+}
+
+/* ============================ REPORTS ============================ */
+R.reports=()=>{
+  const list=S.regs.filter(r=>r.status==='Registered');
+  const rows=list.map(r=>{const p=secProgress(r.id);return `<tr class="click" data-act="go" data-r="report/${r.id}"><td><span class="mono">${r.no}</span></td><td><b>${esc(r.sample)}</b><div class="xs muted">${esc(cust(r.cust).name)}</div></td><td>${Object.entries(p).map(([s,x])=>`<div class="row" style="flex-wrap:nowrap;margin:2px 0"><span class="tag sec" style="min-width:92px">${s}</span><div class="progress ${x.approved===x.total?'ok':''}" style="width:80px"><i style="width:${x.approved/x.total*100}%"></i></div><span class="xs muted">${x.approved}/${x.total}</span></div>`).join('')}</td><td>${Object.keys(p).length>1?'<span class="tag">Combined</span>':'<span class="tag">Single section</span>'}</td><td>${chip(r.report)}</td></tr>`});
+  return page('Report management','Reports are generated only from approved final results. Multi-section registrations produce one combined report once every section is complete.','',
+   card('',table(['Registration','Sample / customer','Section completion','Type','Report status'],rows),'',true));
+};
+const RTYPES={final:'Final result – numerical / text',multi:'Multiple values (2–5) + average',visual:'Instrument / visual result',book:'Validation / verification (book-style)'};
+R.report=(id)=>{
+  const r=reg(id); if(!r) return banner('bad','alert','Registration not found.');
+  const p=secProgress(r.id),done=allApproved(r.id);
+  const pending=Object.entries(p).filter(([,x])=>x.approved<x.total);
+  const released=['Released','Submitted/Dispatched'].includes(r.report);
+  const cc=r.custEdit||{...cust(r.cust)};
+  const ed=can('report.editCustomer')&&!released;
+  return page(`Test report · ${r.no}`,`${esc(r.sample)} · ${esc(cust(r.cust).name)}`,
+   `<button class="btn" data-act="print">${ic('print')} Print / PDF</button>${released?'':gate('report.release',`<button class="btn pri" data-act="release" ${done?'':'disabled title="All sections must be approved first"'}>${ic('check')} Release report</button>`)}`,
+   `<div class="card"><div class="bd">${stepper(['Draft','Preview','Released','Submitted/Dispatched'],r.report)}</div></div>
+   ${!done?`<div class="mt">${banner('warn','alert',`<b>Combined report awaiting completion.</b> Pending: ${pending.map(([s,x])=>`${s} (${x.total-x.approved} test${x.total-x.approved>1?'s':''})`).join(', ')}. Release is blocked until every section is approved. <button class="btn sm" data-act="nudge" style="margin-left:6px">${ic('bell')} Notify pending sections</button>`)}</div>`:''}
+   <div class="split-l mt"><div class="stack noprint">
+    ${card('Report options',`<div class="small muted mb8" style="font-weight:600">Report type</div>${Object.entries(RTYPES).map(([k,l])=>`<label style="display:flex;gap:8px;padding:4px 0;font-size:13px"><input type="radio" name="rtype" data-act="rOpt" data-k="reportType" data-v="${k}" ${r.reportType===k?'checked':''} ${released?'disabled':''}> ${l}</label>`).join('')}
+     <div class="mt" style="border-top:1px solid var(--border);padding-top:12px"><label class="between small" style="padding:4px 0">With NABL symbol <input type="checkbox" data-act="rOpt" data-k="nabl" ${r.nabl?'checked':''} ${released?'disabled':''}></label><label class="between small" style="padding:4px 0">With specification limits <input type="checkbox" data-act="rOpt" data-k="spec" ${r.spec?'checked':''} ${released?'disabled':''}></label></div>`)}
+    ${card('Customer details on report',`<div class="fgrid" style="grid-template-columns:1fr">${[['name','Customer name'],['contact','Contact person'],['city','City'],['state','State']].map(([k,l])=>`<label class="f"><span>${l}</span><input value="${esc(cc[k])}" data-in="rCust" data-k="${k}" ${ed?'':'disabled'}></label>`).join('')}</div><div class="xs muted mt8">${ed?'Authorized approver may correct customer details before final generation.':'Editable only by the Section Approver before release.'}</div>`)}
+    ${card('Section sign-off',Object.entries(p).map(([s,x])=>`<div class="between" style="padding:5px 0"><span class="tag sec">${s}</span>${x.approved===x.total?chip('Approved'):chip('Pending')}</div>`).join(''))}
+   </div>
+   <div class="paperwrap"><div class="paper print-area" id="paper">${paperHTML(r)}</div></div></div>`);
+};
+function paperHTML(r){
+  const c=r.custEdit||cust(r.cust),ws=regWork(r.id),q=quote(r.q);
+  const type=r.reportType,showSpec=r.spec,nabl=r.nabl;
+  const anyNon=ws.some(w=>!TESTS[w.code].nabl);
+  const done=allApproved(r.id);
+  const res=w=>w.status==='Approved'?esc(w.result):'<i style="color:#a15c00">Pending</i>';
+  const tn=w=>TESTS[w.code].name+(nabl&&!TESTS[w.code].nabl?' *':'');
+  let body='';
+  if(type==='multi'){
+    const n=Math.max(2,...ws.map(w=>w.values.length));
+    body=`<table><thead><tr><th>#</th><th>Test</th><th>Method</th>${Array.from({length:n},(_,i)=>`<th>V${i+1}</th>`).join('')}<th>Average</th><th>Unit</th>${showSpec?'<th>Specification</th>':''}</tr></thead><tbody>${ws.map((w,i)=>`<tr><td>${i+1}</td><td>${tn(w)}</td><td>${esc(w.method)}</td>${Array.from({length:n},(_,j)=>`<td>${w.status==='Approved'&&w.values[j]!=null?w.values[j]:''}</td>`).join('')}<td><b>${res(w)}</b></td><td>${w.unit}</td>${showSpec?`<td>${esc(w.spec)}</td>`:''}</tr>`).join('')}</tbody></table>`;
+  } else {
+    body=`<table><thead><tr><th>#</th><th>Test parameter</th><th>Method</th><th>Result</th><th>Unit</th>${showSpec?'<th>Specification</th><th>Remark</th>':''}</tr></thead><tbody>${ws.map((w,i)=>`<tr><td>${i+1}</td><td>${tn(w)}</td><td>${esc(w.method)}</td><td><b>${res(w)}</b></td><td>${w.unit}</td>${showSpec?`<td>${esc(w.spec)}</td><td>${w.status==='Approved'?comply(w.spec,w.result):''}</td>`:''}</tr>`).join('')}</tbody></table>`;
+  }
+  if(type==='visual') body+=`<div class="sect">Instrument data</div>${ws.slice(0,2).map((w,i)=>`<div class="fig">${chromSVG(640,170)}<div class="cap">Figure ${i+1}: ${TESTS[w.code].name} — chromatogram / instrument output copied from instrument PC</div></div>`).join('')}`;
+  if(type==='book'){
+    const vals=ws[0]?.values?.length?ws[0].values:[99.2,99.6,99.8,99.5,99.7];
+    const W=640,H=150,mn=Math.min(...vals)-0.6,mx=Math.max(...vals)+0.6;
+    const pts=vals.map((v,i)=>[40+i*(W-60)/Math.max(1,vals.length-1),H-20-(v-mn)/(mx-mn)*(H-40)]);
+    body=`<div class="sect">Contents</div><ol class="toc"><li>Objective & scope</li><li>Summary of results</li><li>Trend of replicate results</li><li>Instrument data</li><li>Conclusion</li></ol>
+     <div class="sect">1. Objective & scope</div><p>To verify the analytical performance of the stated methods for ${esc(r.sample)} as requested under quotation ${q.id}.</p>
+     <div class="sect">2. Summary of results</div>${body}
+     <div class="sect">3. Trend of replicate results</div><div class="fig"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Trend"><path d="M40 10V${H-20}H${W-10}" fill="none" stroke="#999"/><polyline points="${pts.map(p=>p.map(x=>x.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#0d8a84" stroke-width="2"/>${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#0d8a84"/><text x="${p[0]}" y="${p[1]-8}" font-size="10" text-anchor="middle">${vals[i]}</text>`).join('')}</svg><div class="cap">Figure 1: Replicate results — ${ws[0]?TESTS[ws[0].code].name:''}</div></div>
+     <div class="sect">4. Instrument data</div><div class="fig">${chromSVG(640,160)}<div class="cap">Figure 2: Representative chromatogram</div></div>
+     <div class="sect">5. Conclusion</div><p>${done?'All parameters were evaluated and results are reported above.':'<i>To be completed after all sections are approved.</i>'}</p>`;
+  }
+  const f=Object.entries(r.fields);
+  return `<div class="phd"><div class="plogo"><div class="logo">LL</div><div><b>LUCID LABS</b><span style="font-size:10.5px;color:#555">${LAB.addr} · GSTIN ${LAB.gst}</span></div></div>${nabl?`<div style="text-align:center"><div class="nabl">NABL<small>TC-XXXX</small></div></div>`:''}</div>
+  <h2>${type==='book'?'VALIDATION / VERIFICATION REPORT':'TEST REPORT'}</h2>
+  <table class="kv"><tbody><tr><td>Report No.</td><td>${r.no.replace('REG','TR')}</td><td style="width:18%;background:#f6f8f9;font-weight:600">Issue date</td><td>${['Released','Submitted/Dispatched'].includes(r.report)?fmt(r.releasedOn||TODAY):'<i>on release</i>'}</td></tr>
+  ${nabl?`<tr><td>ULR No.</td><td colspan="3">TC-XXXX-26-XXXXXXXXF <span style="color:#777">(format to be confirmed)</span></td></tr>`:''}
+  <tr><td>Customer</td><td colspan="3"><b>${esc(c.name)}</b>, ${esc(c.city)}, ${esc(c.state)}<br>Kind attn: ${esc(c.contact)}</td></tr>
+  <tr><td>Customer ref.</td><td>PO ${q.po?.no||'—'} dt. ${fmt(q.po?.date)}</td><td style="background:#f6f8f9;font-weight:600">Quotation</td><td>${q.id}</td></tr></tbody></table>
+  <div class="sect">Sample details</div>
+  <table class="kv"><tbody><tr><td>Sample name</td><td colspan="3"><b>${esc(r.sample)}</b></td></tr>${f.reduce((a,[k,v],i)=>i%2?a:a+`<tr><td>${esc(k)}</td><td>${esc(v)}</td>${f[i+1]?`<td style="background:#f6f8f9;font-weight:600;width:18%">${esc(f[i+1][0])}</td><td>${esc(f[i+1][1])}</td>`:'<td></td><td></td>'}</tr>`,'')}
+  <tr><td>Received on</td><td>${fmt(r.received)}</td><td style="background:#f6f8f9;font-weight:600">Analysis period</td><td>${fmt(r.regDate)} – ${done?fmt(TODAY):'…'}</td></tr></tbody></table>
+  ${type==='book'?body:`<div class="sect">Results</div>${body}`}
+  <p style="font-size:10.5px;color:#444;margin-top:10px">${nabl&&anyNon?'* Parameter not covered under NABL scope of accreditation.<br>':''}Results relate only to the sample tested. This report shall not be reproduced except in full without written approval of Lucid Labs.</p>
+  <div class="foot"><div>Reviewed by<br><b>${[...new Set(ws.map(w=>SEC_APPROVER[w.section]))].join(', ')}</b></div><div>Authorized Signatory<br><b>${['Released','Submitted/Dispatched'].includes(r.report)?'Dr. Meera Rao':'&nbsp;'}</b></div></div>
+  <div class="eor">— End of report —</div>`;
+}
+
+/* ============================ DISPATCH ============================ */
+R.dispatch=()=>{
+  const ready=S.regs.filter(r=>r.report==='Released');
+  const rows=ready.map(r=>`<tr><td class="mono">${r.no}</td><td><b>${esc(cust(r.cust).name)}</b><div class="xs muted">${esc(r.sample)}</div></td><td>Test report${invFor(r.id)?' + Tax invoice':''}</td><td>${Object.keys(secProgress(r.id)).length>1?'<span class="tag">Combined</span>':'—'}</td><td>${chip('Ready to dispatch')}</td><td>${gate('dispatch.record',`<button class="btn sm pri" data-act="dispatchNew" data-id="${r.id}">${ic('truck')} Record dispatch</button>`)}</td></tr>`);
+  const hist=S.dispatch.map(d=>`<tr><td class="mono">${d.id}</td><td><a href="#/reg/${d.reg}" class="mono">${d.reg}</a><div class="xs muted">${esc(cust(reg(d.reg)?.cust||'C1').name)}</div></td><td class="small">${esc(d.docs)}</td><td>${fmt(d.date)}<div class="xs muted">by ${esc(d.by)}</div></td><td class="small">${esc(d.courier)}<div class="mono xs">${esc(d.awb)}</div></td><td>${d.rcvDate?`${fmt(d.rcvDate)}<div class="xs muted">${esc(d.rcvBy)}</div>`:'—'}</td><td>${chip(d.rcvDate?'Delivered':'In Transit')}</td><td>${d.rcvDate?'':gate('dispatch.record',`<button class="btn sm" data-act="dispatchRcv" data-id="${d.id}">Confirm receipt</button>`)}</td></tr>`);
+  return page('Customer submission & dispatch','Final report submission and hard-copy dispatch of reports and invoices, with courier and receipt confirmation at the customer end.','',
+   `${card('Ready to dispatch',table(['Registration','Customer / sample','Documents','Report','Status',''],rows,'No released reports waiting for dispatch.'),'',true)}<div class="mt">${card('Dispatch register',table(['Dispatch','Registration','Documents','Dispatched','Courier / AWB','Received at customer','Status',''],hist),'',true)}</div>`);
+};
+
+/* ============================ STORES ============================ */
+R.stores=()=>{
+  const pendingIn=S.regs.filter(r=>['Released','Submitted/Dispatched'].includes(r.report)&&!S.stores.some(s=>s.reg===r.id));
+  const rows=S.stores.map(s=>{const st=storeStatus(s);return `<tr><td class="mono">${s.id}</td><td><span class="mono">${s.reg}</span><div class="xs muted">${esc(s.sample)}</div></td><td>${fmt(s.inDate)}<div class="xs muted">${esc(s.inBy)}</div></td><td>${s.loc}</td><td>${s.retVal} ${s.retUnit}</td><td>${fmt(plannedDisposal(s))}</td><td>${s.actual?`${fmt(s.actual)}<div class="xs muted">${esc(s.method)} · ${esc(s.by)}</div>`:'—'}</td><td>${chip(st)}</td><td>${s.actual?'':gate('stores.manage',`<button class="btn sm ${st==='Due for Disposal'?'pri':''}" data-act="dispose" data-id="${s.id}">Record disposal</button>`)}</td></tr>`});
+  return page('Stores · remnant sample retention','Remnant samples received after testing, retained for the defined period and disposed with method and responsible person recorded.','',
+   `<div class="grid g4">${['In Store','Retention Active','Due for Disposal','Disposed'].map(k=>`<div class="card kpi"><div class="l">${k}</div><div class="v">${k==='In Store'?S.stores.filter(s=>!s.actual).length:S.stores.filter(s=>storeStatus(s)===k).length}</div></div>`).join('')}</div>
+   ${pendingIn.length?`<div class="mt">${card('Awaiting receipt in store',table(['Registration','Sample','Customer',''],pendingIn.map(r=>`<tr><td class="mono">${r.no}</td><td>${esc(r.sample)}</td><td>${esc(cust(r.cust).name)}</td><td>${gate('stores.manage',`<button class="btn sm pri" data-act="storeIn" data-id="${r.id}">Receive remnant</button>`)}</td></tr>`)),'',true)}</div>`:''}
+   <div class="mt">${card('Retention register',table(['Store ID','Registration / sample','Received in store','Location','Retention','Planned disposal','Actual disposal','Status',''],rows),'',true)}</div>`);
+};
+
+/* ============================ INVOICES ============================ */
+R.invoices=()=>{
+  const toMake=S.regs.filter(r=>['Released','Submitted/Dispatched'].includes(r.report)&&!invFor(r.id));
+  const rows=S.invoices.map(i=>{const r=reg(i.reg),t=totals(i.items,i.discount,r.cust,i.relax);return `<tr class="click" data-act="go" data-r="invoice/${i.id}"><td class="mono">${i.id}</td><td>${fmt(i.date)}</td><td><b>${esc(cust(r.cust).name)}</b><div class="xs muted">${r.no}</div></td><td class="num">${inr(t.total)}</td><td class="num">${inr(t.total-i.advance)}</td><td>${chip(i.status)}</td></tr>`});
+  return page('Tax invoices','Invoices raised against registration / quotation / PO with GST, tax relaxations, advance payment and authorized signature.','',
+   `${toMake.length?card('Released reports without invoice',table(['Registration','Customer','Quotation / PO',''],toMake.map(r=>{const q=quote(r.q);return `<tr><td class="mono">${r.no}</td><td>${esc(cust(r.cust).name)}</td><td class="small">${q.id} · PO ${q.po?.no}</td><td>${gate('invoice.edit',`<button class="btn sm pri" data-act="invNew" data-id="${r.id}">${ic('plus')} Prepare invoice</button>`)}</td></tr>`})),'',true)+'<div class="mt"></div>':''}
+   ${card('Invoice register',table(['Invoice','Date','Customer','#Invoice value','#Balance due','Status'],rows),'',true)}`);
+};
+R.invoice=(id)=>{
+  const i=S.invoices.find(x=>x.id===id); if(!i) return banner('bad','alert','Invoice not found.');
+  const r=reg(i.reg),q=quote(r.q),c=cust(r.cust);
+  const ed=can('invoice.edit')&&i.status==='Draft';const dis=ed?'':'disabled';
+  let act='';
+  if(i.status==='Draft') act=gate('invoice.authorize',`<button class="btn pri" data-act="invStatus" data-v="Approved">${ic('sign')} Approve & sign</button>`);
+  if(i.status==='Approved') act=gate('invoice.edit',`<button class="btn pri" data-act="invStatus" data-v="Issued">${ic('mail')} Issue to customer</button>`);
+  if(i.status==='Issued') act=gate('dispatch.record',`<button class="btn" data-act="invStatus" data-v="Dispatched">${ic('truck')} Mark hard copy dispatched</button>`);
+  const rows=i.items.map((it,k)=>`<tr><td><input value="${esc(it.desc)}" data-in="iItem" data-i="${k}" data-k="desc" ${dis}></td><td class="small">${esc(it.method)}</td><td><input type="number" value="${it.qty}" data-in="iItem" data-i="${k}" data-k="qty" ${dis} style="width:64px"></td><td><input type="number" value="${it.rate}" data-in="iItem" data-i="${k}" data-k="rate" ${dis} style="width:90px"></td><td class="num" id="iamt${k}">${inr(it.qty*it.rate)}</td></tr>`);
+  return page(`Tax invoice ${i.id}`,`${esc(c.name)} · ${r.no} · quotation ${q.id} · PO ${q.po?.no}`,`<button class="btn" data-act="print">${ic('print')} Print / PDF</button>${act}`,
+   `<div class="card"><div class="bd">${stepper(['Draft','Approved','Issued','Dispatched'],i.status)}</div></div>
+   <div class="split mt"><div class="stack">
+    ${card('Customer & references',`<div class="fgrid c3"><label class="f"><span>Customer</span><input value="${esc(c.name)}" readonly></label><label class="f"><span>Customer GSTIN</span><input value="${c.gst}" readonly class="mono"></label><label class="f"><span>Place of supply</span><input value="${c.state}" readonly></label><label class="f"><span>Registration</span><input value="${r.no}" readonly class="mono"></label><label class="f"><span>Sample</span><input value="${esc(r.sample)}" readonly></label><label class="f"><span>Invoice date</span><input type="date" value="${i.date}" ${dis}></label></div>`)}
+    ${card('Test charges',table(['Description','Method','Qty','Rate (₹)','#Amount'],rows),'',true)}
+    <div class="grid g2">
+     ${card('Tax relaxation & advance',`<label class="f"><span>Applicable tax relaxation</span><select data-in="iRelax" ${dis}>${Object.entries(RELAX).map(([k,v])=>`<option value="${k}" ${i.relax===k?'selected':''}>${v.label}</option>`).join('')}</select></label><label class="f mt"><span>Advance payment received (₹)</span><input type="number" value="${i.advance}" data-in="iAdv" ${dis}></label><label class="f mt"><span>Discount (%)</span><input type="number" value="${i.discount}" data-in="iDisc" ${dis}></label>`)}
+     ${card('Bank details & authorization',`<dl class="dl"><dt>Bank</dt><dd>${LAB.bank.name}</dd><dt>A/c no.</dt><dd>${LAB.bank.ac}</dd><dt>IFSC</dt><dd>${LAB.bank.ifsc}</dd></dl><div class="sig mt ${i.signedBy?'done':''}">${i.signedBy?`<b>${ic('sign')} Signed</b><div class="small">${esc(i.signedBy)} · Authorized Signatory</div>`:'<span class="small muted">Awaiting authorized signature</span>'}</div>`)}
+    </div>
+   </div><div class="card" style="position:sticky;top:76px"><div class="hd"><h2>Invoice summary</h2></div><div class="bd" id="itotals">${invTotalsHTML(i)}</div></div></div>`);
+};
+function invTotalsHTML(i){
+  const r=reg(i.reg),q=quote(r.q),t=totals(i.items,i.discount,r.cust,i.relax);
+  const over=q.po&&t.total>q.po.value+1;
+  return `<div class="sumrow"><span>Sub-total</span><span>${inr(t.sub)}</span></div><div class="sumrow"><span>Discount ${i.discount}%</span><span>− ${inr(t.disc)}</span></div><div class="sumrow"><span>Taxable value</span><span>${inr(t.taxable)}</span></div>
+  ${t.same?`<div class="sumrow"><span>CGST ${t.rate/2}%</span><span>${inr(t.cg)}</span></div><div class="sumrow"><span>SGST ${t.rate/2}%</span><span>${inr(t.sg)}</span></div>`:`<div class="sumrow"><span>IGST ${t.rate}%</span><span>${inr(t.ig)}</span></div>`}
+  <div class="sumrow total"><span>Invoice value</span><span>${inr(t.total)}</span></div><div class="sumrow"><span>Less: advance</span><span>− ${inr(i.advance)}</span></div><div class="sumrow" style="font-weight:700"><span>Balance due</span><span>${inr(t.total-i.advance)}</span></div>
+  <div class="small muted mt8">PO value: ${q.po?inr(q.po.value):'—'}</div>${over?`<div class="mt8">${banner('warn','alert','Invoice value exceeds PO value — confirm with customer.')}</div>`:''}`;
+}
+
+/* ============================ NOTIFICATIONS / ROLES ============================ */
+R.notifications=()=>page('Notifications',`In-system notifications for <b>${esc(ROLES[ROLE].label)}</b>. Customer-facing notices are sent by e-mail.`,`<button class="btn" data-act="readAll">Mark all read</button>`,
+  card('',myNotes().map(n=>`<div class="list-item ${n.read?'read':''}" style="cursor:pointer" data-act="note" data-id="${n.id}"><span class="dotc"></span><div style="flex:1">${esc(n.text)}<div class="xs faint">${n.at}</div></div>${ic('arrow','faint')}</div>`).join('')||'<div class="empty">No notifications.</div>','',true));
+R.roles=()=>{
+  const ks=Object.keys(ROLES).filter(k=>k!=='admin');
+  return page('Roles & permissions','Permission matrix derived from the approval boundaries in the workflow document. Use the role switcher to experience each view.','',
+   `${card('',`<div class="table-wrap"><table class="t"><thead><tr><th>Permission</th>${ks.map(k=>`<th style="text-align:center;white-space:normal;min-width:88px">${ROLES[k].label}</th>`).join('')}</tr></thead><tbody>${Object.entries(PERMS).map(([p,l])=>`<tr><td>${l}</td>${ks.map(k=>ROLES[k].perms.includes(p)?'<td class="perm-yes">✓</td>':'<td class="perm-no">·</td>').join('')}</tr>`).join('')}</tbody></table></div>`,'',true)}
+   <div class="mt">${card('Approval boundaries enforced',`<ul style="margin:0;padding-left:18px;line-height:1.9">${['CRM cannot approve technical laboratory results.','Analysts enter technical data; report release stays with the authorized reviewer / approver.','Section Approver has controlled rights to modify tests / methods and customer details only where required.','Report release is blocked until the required section review / approval is complete.','Combined reports cannot be finalized until all required sections are complete.','Stores disposal must record who disposed the sample and the disposal method.','Quotation, report and invoice signatures are restricted to authorized users.'].map(x=>`<li>${x}</li>`).join('')}</ul>`)}</div>`);
+};
+
+/* ============================ CLIENT APPROVAL ============================ */
+const AP_ITEMS=[
+ ['Customer / CRM enquiry fields','enquiries'],['Quotation fields, GST, discount and terms','quote/Q-26-0113'],['PO and sample receipt process','samples'],['Registration templates: Pharma / Mech / OM / Gen','regnew/Q-26-0111'],
+ ['Test and method copy / edit permissions','reg/P-0145'],['Section allocation and analyst assignment','section'],['Analyst observation / raw-data capture','analyst/W-0291'],['Chemical / standard / equipment usage capture','analyst/W-0291'],
+ ['Formula / calculation and result workflow','analyst/W-0291'],['Review and approval process','review/W-0291'],['Report formats and NABL / specification options','report/REG-0138'],['Multi-section combined report process','report/REG-0142'],
+ ['Customer submission and dispatch tracking','dispatch'],['Sample retention / disposal process','stores'],['Tax invoice process','invoice/INV-26-0091'],['Notifications','notifications'],['User roles and permissions','roles']];
+const QUESTIONS=['What does the “OM” registration template stand for, and which sample fields should it capture?','Lab’s registered state / GSTIN for CGST+SGST vs IGST determination, and bank details for quotation & invoice.','Report / registration / ULR numbering formats (NABL ULR format and financial-year reset).','Default retention period per sample category (Pharma, Mech, OM, Gen) and approved disposal methods.','E-signature method for analysts, approvers and signatory (PIN, password re-entry, or digital certificate).','Formula library: which test calculations should be pre-configured at go-live?','Customer notification channel(s): e-mail only, or SMS / WhatsApp as well?','Should quotation authorization require both Lab HOD and Authorized Signatory (as prototyped), or one of them?'];
+let AP=(()=>{try{return JSON.parse(localStorage.getItem('lims.approval')||'{}')}catch(e){return {}}})();
+const saveAP=()=>{try{localStorage.setItem('lims.approval',JSON.stringify(AP))}catch(e){}};
+R.approval=()=>{
+  AP.items=AP.items||{};AP.sign=AP.sign||{};
+  const n=AP_ITEMS.length,ok=AP_ITEMS.filter((_,i)=>AP.items[i]?.v==='ok').length,chg=AP_ITEMS.filter((_,i)=>AP.items[i]?.v==='chg').length;
+  return page('Client approval checklist','Review each item using the linked prototype screen, mark it Approved or Changes Required and add comments. Responses are saved in this browser; use Print / PDF to share the signed checklist.',
+   `<button class="btn" data-act="apReset">Clear responses</button><button class="btn pri" data-act="print">${ic('print')} Print / PDF</button>`,
+   `<div class="print-area"><div class="card"><div class="bd"><div class="between"><div><b>Lucid Labs — LIMS workflow & UI/UX approval</b><div class="small muted">Prepared by Nexonweb Solution · baseline for UI/UX design and development</div></div><div class="row"><span class="chip ok">${ok} approved</span><span class="chip warn">${chg} changes</span><span class="chip">${n-ok-chg} open</span></div></div><div class="progress ok mt"><i style="width:${ok/n*100}%"></i></div></div></div>
+   <div class="card mt">${AP_ITEMS.map(([l,r],i)=>{const a=AP.items[i]||{};return `<div class="ap-item ${a.v==='ok'?'ok':a.v==='chg'?'chg':''}"><span class="idx">${i+1}</span><div><div class="between" style="justify-content:flex-start;gap:10px"><b>${l}</b><a href="#/${r}" class="small noprint">View screen →</a></div>${a.v==='chg'||a.c?`<textarea placeholder="Describe the change required…" data-in="apC" data-i="${i}">${esc(a.c||'')}</textarea>`:`<button class="btn sm ghost noprint" data-act="apComment" data-i="${i}" style="padding-left:0">+ Add comment</button>`}</div><div class="ap-choice"><label class="${a.v==='ok'?'on-ok':''}"><input type="radio" name="ap${i}" data-act="apSet" data-i="${i}" data-v="ok" ${a.v==='ok'?'checked':''}> Approved</label><label class="${a.v==='chg'?'on-chg':''}"><input type="radio" name="ap${i}" data-act="apSet" data-i="${i}" data-v="chg" ${a.v==='chg'?'checked':''}> Changes required</label></div></div>`}).join('')}</div>
+   <div class="card mt"><div class="hd"><h2>Open questions for Lucid Labs</h2><span class="small muted">Assumptions used in this prototype that need confirmation</span></div><div class="bd"><ol style="margin:0;padding-left:20px;line-height:1.9">${QUESTIONS.map(q=>`<li>${q}</li>`).join('')}</ol></div></div>
+   <div class="card mt"><div class="hd"><h2>Sign-off</h2></div><div class="bd flush"><div class="table-wrap"><table class="t"><thead><tr><th>Approval</th><th>Name</th><th>Designation</th><th>Date</th></tr></thead><tbody>${['Client Representative','Lucid Labs Representative','Software Project Representative'].map((p,i)=>`<tr><td><b>${p}</b></td><td><input data-in="apS" data-k="n${i}" value="${esc(AP.sign['n'+i]||'')}" placeholder="Full name"></td><td><input data-in="apS" data-k="d${i}" value="${esc(AP.sign['d'+i]||'')}"></td><td><input type="date" data-in="apS" data-k="t${i}" value="${esc(AP.sign['t'+i]||'')}"></td></tr>`).join('')}</tbody></table></div></div></div>
+   <p class="small muted mt">By approving, the client confirms that the functional flow and screens represent the required LIMS business process and may be used as the baseline for UI/UX design and software development.</p></div>`);
+};
+
+/* ============================ ACTIONS ============================ */
+const A={};
+A.go=d=>go(d.r);
+A.menu=()=>document.body.classList.toggle('nav-open');
+A.theme=()=>{const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');const nx=cur==='dark'?'light':'dark';document.documentElement.dataset.theme=nx;try{localStorage.setItem('lims.theme',nx)}catch(e){}};
+A.closeModal=closeModal;
+A.saveModal=()=>{const f=$('#mform');if(!f.reportValidity())return;if(modalSave&&modalSave(formData())!==false){closeModal();render()}};
+A.print=()=>window.print();
+A.tab=(d,el)=>{const card=el.closest('.card');card.querySelectorAll('.tabs button').forEach((b,i)=>b.classList.toggle('on',i==d.i));card.querySelectorAll('.tabpane').forEach((p,i)=>p.classList.toggle('on',i==d.i))};
+A.note=d=>{const n=S.notes.find(x=>x.id==d.id);n.read=true;go(n.r)};
+A.readAll=()=>{myNotes().forEach(n=>n.read=true);render()};
+// Enquiries
+A.enqFilter=d=>{enqFilter=d.v;render()};
+A.newEnquiry=()=>openModal('New customer enquiry',enquiryForm(),'Create enquiry',f=>{
+  const tests=Object.keys(f).filter(k=>k.startsWith('t_')).map(k=>k.slice(2));
+  if(!tests.length){toast('Select at least one required test.');return false}
+  let cid=f.cust;
+  if(cid==='new'){if(!f.nname){toast('Enter the new customer name.');return false}const [city,state]=(f.nstate||',').split(',').map(s=>s.trim());cid='C'+(S.customers.length+1);S.customers.push({id:cid,name:f.nname,city:city||'',state:state||LAB.state,gst:f.gst||'',contact:f.contact,phone:f.nphone||'',email:f.nemail||''})}
+  const id='E-0'+(++S.seq.enq);S.enquiries.unshift({id,date:TODAY,source:f.source,cust:cid,contact:f.contact,ref:f.ref||'—',courier:f.courier,tests,status:'New',notes:f.notes});
+  toast(`Enquiry <b>${id}</b> created.`);
+});
+A.enqToQuote=d=>{const e=S.enquiries.find(x=>x.id===d.id);const id='Q-26-0'+(++S.seq.q);S.quotes.unshift({id,date:TODAY,valid:addDays(TODAY,30),enq:e.id,cust:e.cust,status:'Draft',discount:0,items:items(e.tests,e.ref&&e.ref!=='—'?e.ref.slice(0,40):'Sample'),hodOk:false,signedBy:null,terms:DEFAULT_TERMS});e.status='Quotation Prepared';toast(`Draft quotation <b>${id}</b> created with ${e.tests.length} test(s) from ${e.id}.`);go('quote/'+id)};
+// Quotes
+A.newQuote=()=>{const id='Q-26-0'+(++S.seq.q);S.quotes.unshift({id,date:TODAY,valid:addDays(TODAY,30),enq:null,cust:'C1',status:'Draft',discount:0,items:items(['ASSAY'],'Sample'),hodOk:false,signedBy:null,terms:DEFAULT_TERMS});go('quote/'+id)};
+A.qAdd=()=>{const q=quote(param);q.items.push(items(['LOD'],q.items[0]?.desc||'Sample')[0]);render()};
+A.qDel=d=>{const q=quote(param);q.items.splice(d.i,1);render()};
+A.qStatus=d=>{const q=quote(param);q.status=d.v;if(d.v==='Internal Review')notify(['hod'],`Quotation ${q.id} submitted for internal review — confirm tests & methods.`,'quote/'+q.id);toast(`Quotation ${q.id} → <b>${d.v}</b>`);render()};
+A.qHod=()=>{const q=quote(param);q.hodOk=true;notify(['signatory'],`Quotation ${q.id} confirmed by Lab HOD — awaiting authorization.`,'quote/'+q.id);toast('Tests & methods confirmed by HOD.');render()};
+A.qAuthorize=()=>{const q=quote(param);q.signedBy=me();q.status='Sent';if(q.enq){const e=S.enquiries.find(x=>x.id===q.enq);if(e)e.status='Quotation Prepared'}toast(`Quotation signed and e-mailed to ${esc(cust(q.cust).contact)} (mock).`);render()};
+A.recordPO=d=>{const q=quote(d.id);openModal(`Record PO & sample receipt · ${q.id}`,poForm(q),'Save & confirm receipt',f=>{
+  q.po={no:f.no,date:f.date,value:+f.value};q.receipt={date:f.rdate,mode:f.mode,courier:f.courier,awb:f.awb,count:f.count,condition:f.condition,storage:f.storage,by:me(),confirmed:true};q.status='Accepted';
+  if(q.enq){const e=S.enquiries.find(x=>x.id===q.enq);if(e)e.status='Closed'}
+  notify(['crm'],`PO ${f.no} recorded and sample received for ${q.id} — ready for pre-registration.`,'regnew/'+q.id);toast(`PO <b>${esc(f.no)}</b> recorded · sample received.`)})};
+// Registration
+A.regTab=d=>{regTab=d.v;render()};
+A.dTpl=d=>{DRAFT.template=d.v;render()};
+A.dCopy=()=>{const q=quote(DRAFT.q);DRAFT.tests=q.items.map(i=>({code:i.code,method:i.method,spec:i.spec,section:TESTS[i.code].section}));toast(`${DRAFT.tests.length} test(s) copied from ${q.id}.`);render()};
+A.dDel=d=>{DRAFT.tests.splice(d.i,1);render()};
+A.submitPre=()=>{
+  if(!DRAFT.tests.length){toast('Add tests to the test group first.');return}
+  if(!DRAFT.sample){toast('Sample name is required.');return}
+  const q=quote(DRAFT.q),n=++S.seq.reg,id='P-0'+n;
+  S.regs.unshift({id,no:null,pre:`PRE/26-27/0${n}`,q:q.id,cust:q.cust,template:DRAFT.template,sample:DRAFT.sample,qty:DRAFT.qty,received:q.receipt.date,regDate:null,status:'Pre-Registered',report:null,fields:{...DRAFT.fields},tests:DRAFT.tests,tat:addDays(q.receipt.date,DRAFT.tat==='Urgent'?3:7),reportType:'final',nabl:true,spec:true,custEdit:null});
+  notify(['regrev'],`Pre-registration PRE/26-27/0${n} (${DRAFT.sample}) awaiting registration review.`,'reg/'+id);
+  DRAFT=null;toast(`Pre-registration <b>PRE/26-27/0${n}</b> submitted for review.`);go('reg/'+id)};
+A.regApprove=d=>{const r=reg(d.id);const n=r.pre.split('/').pop();const nid='REG-'+n;
+  r.id=nid;r.no=`LL/REG/26-27/${n}`;r.status='Registered';r.report='Draft';r.regDate=TODAY;
+  r.tests.forEach(t=>S.work.push({id:'W-0'+(++S.seq.w),reg:nid,code:t.code,section:t.section,analyst:null,status:'Unassigned',method:t.method,spec:t.spec,unit:TESTS[t.code].unit,values:[],reps:2,result:'',raw:'',chem:[],equip:[],files:[],remarks:'',signed:null,returnNote:'',reviewNote:'',reviewedBy:'',calc:{}}));
+  S.notes.forEach(x=>{if(x.r==='reg/'+d.id)x.r='reg/'+nid});
+  const secs=[...new Set(r.tests.map(t=>t.section))];
+  notify(['secapp'],`${nid} registered to ${secs.join(' & ')} — awaiting analyst allocation.`,'section');
+  notify(['crm'],`Registration details for ${nid} e-mailed to ${cust(r.cust).contact}.`,'reg/'+nid);
+  toast(`Registered as <b>${r.no}</b> · customer notified by e-mail.`);go('reg/'+nid)};
+A.regReturn=d=>{toast('Returned to CRM with comments (mock).')};
+// Section
+A.secTab=d=>{SEC=d.v;secSel.clear();render()};
+A.secPick=(d,el)=>{el.checked?secSel.add(d.id):secSel.delete(d.id);$('#selCount').textContent=secSel.size};
+A.assign=()=>{if(!secSel.size){toast('Select one or more unassigned tests.');return}const a=$('#assignTo').value;secSel.forEach(id=>{const w=wk(id);w.analyst=a;w.status='Assigned';notify(['analyst'],`${TESTS[w.code].name} (${w.reg}) assigned to you.`,'analyst/'+w.id)});toast(`${secSel.size} test(s) assigned to <b>${a}</b> · analyst notified.`);secSel.clear();render()};
+A.reassign=d=>{const w=wk(d.id);openModal('Reassign analyst',`<label class="f"><span>Analyst</span><select name="a">${ANALYSTS[w.section].map(a=>`<option ${a===w.analyst?'selected':''}>${a}</option>`).join('')}</select></label>`,'Reassign',f=>{w.analyst=f.a;notify(['analyst'],`${TESTS[w.code].name} (${w.reg}) reassigned to you.`,'analyst/'+w.id);toast('Analyst reassigned.')})};
+A.editMethod=d=>{const w=wk(d.id);openModal(`Edit test / method · ${TESTS[w.code].name}`,`<div class="fgrid"><label class="f full"><span>Method</span><input name="m" value="${esc(w.method)}"></label><label class="f"><span>Specification</span><input name="s" value="${esc(w.spec)}"></label><label class="f"><span>Reason for change</span><input name="why" required placeholder="Required for audit trail"></label></div>`,'Save change',f=>{w.method=f.m;w.spec=f.s;toast('Method updated · change logged to audit trail.')})};
+// Analyst
+A.wSave=()=>{const w=wk(param);if(w.status==='Assigned'||w.status==='Correction Required')w.status='In Testing';toast('Draft saved.');render()};
+A.wSign=()=>{const w=wk(param);w.signed={by:me()==='System Admin'?w.analyst:me(),at:stamp()};render();A.tab({i:5},$('.tabs button'))};
+A.wApplyCalc=()=>{const w=wk(param),F=FORMULAS[w.code],s=stats(w.values);const v=F?F.fn(w.calc):s?s.avg:null;if(v==null){toast('Enter values first.');return}w.result=String(round(v,2));render();A.tab({i:4},$('.tabs button'))};
+A.wSubmit=()=>{const w=wk(param);if(!w.result){toast('Enter the final result before submitting.');return}if(!w.signed){toast('Analyst signature is required — see “Remarks & signature”.');return}
+  w.status='Submitted for Review';notify(['secapp'],`${TESTS[w.code].name} (${w.reg}) submitted for review by ${w.analyst}.`,'review/'+w.id);toast('Submitted for review · reviewer notified.');render()};
+A.wRowAdd=d=>{const w=wk(param);w[d.t].push(d.t==='equip'?{id:EQUIP[0][0],from:'',to:''}:{});render();A.tab({i:d.t==='equip'?3:2},$('.tabs button'))};
+A.wRowDel=d=>{const w=wk(param);w[d.t].splice(d.i,1);render();A.tab({i:d.t==='equip'?3:2},$('.tabs button'))};
+// Review
+A.rvApprove=()=>{const w=wk(param);const all=[...document.querySelectorAll('.rvchk')].every(c=>c.checked);if(!all){toast('Complete the verification checklist before approving.');return}
+  w.status='Approved';w.reviewedBy=me();w.reviewNote=$('#rvNote').value;const r=reg(w.reg);
+  if(allApproved(r.id)&&r.report==='Draft'){r.report='Preview';notify(['secapp','signatory'],`All sections approved for ${r.id} — report ready for preview & release.`,'report/'+r.id)}
+  else if(!allApproved(r.id)) {const pend=Object.entries(secProgress(r.id)).filter(([,x])=>x.approved<x.total).map(([s])=>s);if(Object.keys(secProgress(r.id)).length>1)notify(['crm','secapp'],`Combined report ${r.id} awaiting completion of ${pend.join(' & ')}.`,'report/'+r.id)}
+  toast('Test data approved.');render()};
+A.rvReturn=()=>{const w=wk(param);const note=$('#rvNote').value.trim();if(!note){toast('Add a reviewer comment explaining the correction.');$('#rvNote').focus();return}
+  w.status='Correction Required';w.returnNote=note;w.reviewedBy=me();w.signed=null;notify(['analyst'],`${TESTS[w.code].name} (${w.reg}) returned for correction.`,'analyst/'+w.id);toast('Returned to analyst for correction.');render()};
+// Reports
+A.rOpt=(d,el)=>{const r=reg(param);r[d.k]=el.type==='checkbox'?el.checked:d.v;$('#paper').innerHTML=paperHTML(r)};
+A.release=()=>{const r=reg(param);if(!allApproved(r.id)){toast('All sections must be approved first.');return}r.report='Released';r.releasedOn=TODAY;notify(['crm','accounts'],`Report ${r.no} released — ready for customer submission & invoicing.`,'dispatch');toast(`Report released · CRM & Accounts notified.`);render()};
+A.nudge=()=>{toast('Pending section approvers notified.')};
+// Dispatch
+A.dispatchNew=d=>{const r=reg(d.id),multi=Object.keys(secProgress(r.id)).length>1;openModal(`Record dispatch · ${r.no}`,`<div class="fgrid">
+  <label class="f full"><span>Documents</span><select name="docs"><option>Test report (soft copy e-mailed + hard copy)</option><option>Test report + Tax invoice (hard copy)</option><option>Test report (soft copy only)</option></select></label>
+  <label class="f req"><span>Dispatch date</span><input type="date" name="date" value="${TODAY}" required></label><label class="f req"><span>Dispatched by</span><input name="by" value="${esc(me())}" required></label>
+  <label class="f"><span>Courier</span><input name="courier" placeholder="Blue Dart, DTDC, By hand…"></label><label class="f"><span>AWB / docket no.</span><input name="awb" class="mono"></label>
+  ${multi?`<label class="full" style="display:flex;gap:8px;font-size:13px"><input type="checkbox" name="combined" required> I verify this combined report includes results from all sections (${Object.keys(secProgress(r.id)).join(', ')}).</label>`:''}</div>`,'Save dispatch',f=>{
+  S.dispatch.unshift({id:'D-0'+(++S.seq.d),reg:r.id,docs:f.docs,date:f.date,by:f.by,courier:f.courier,awb:f.awb,rcvDate:null,rcvBy:'',combinedOk:!!f.combined});r.report='Submitted/Dispatched';toast('Dispatch recorded.')})};
+A.dispatchRcv=d=>{const x=S.dispatch.find(y=>y.id===d.id);openModal('Confirm receipt at customer end',`<div class="fgrid"><label class="f req"><span>Date received</span><input type="date" name="d" value="${TODAY}" required></label><label class="f req"><span>Received by (customer side)</span><input name="b" required></label></div>`,'Confirm',f=>{x.rcvDate=f.d;x.rcvBy=f.b;const inv=invFor(x.reg);if(inv&&inv.status==='Issued'&&/invoice/i.test(x.docs))inv.status='Dispatched';toast('Receipt confirmed.')})};
+// Stores
+A.storeIn=d=>{const r=reg(d.id);openModal(`Receive remnant sample · ${r.no}`,`<div class="fgrid"><label class="f req"><span>Date received in store</span><input type="date" name="d" value="${TODAY}" required></label><label class="f req"><span>Received by</span><input name="b" value="${esc(me())}" required></label><label class="f"><span>Storage location</span><input name="loc" placeholder="Rack / shelf"></label><div class="row" style="align-items:flex-end"><label class="f" style="flex:1"><span>Retention period</span><input type="number" name="rv" value="${r.template==='Pharma'?6:30}" min="1" id="rv"></label><select name="ru" id="ru" style="width:auto"><option ${r.template==='Pharma'?'':'selected'}>days</option><option ${r.template==='Pharma'?'selected':''}>months</option></select></div><div class="full small muted" id="plan"></div></div>`,'Save',f=>{S.stores.unshift({id:'ST-0'+(++S.seq.st),reg:r.id,sample:r.sample,cust:r.cust,inDate:f.d,inBy:f.b,retVal:+f.rv,retUnit:f.ru,loc:f.loc||'—',actual:null,method:'',by:''});toast('Remnant sample received in store.')});
+  const upd=()=>{const s={inDate:$('#mform [name=d]').value,retVal:$('#rv').value,retUnit:$('#ru').value};$('#plan').innerHTML=`Planned disposal date (auto-calculated): <b>${fmt(plannedDisposal(s))}</b>`};$('#mform').addEventListener('input',upd);upd()};
+A.dispose=d=>{const s=S.stores.find(x=>x.id===d.id);openModal(`Record disposal · ${s.reg}`,`<div class="banner mb8">${ic('info')}<div>${esc(s.sample)} · planned disposal ${fmt(plannedDisposal(s))}</div></div><div class="fgrid mt"><label class="f req"><span>Actual disposal date</span><input type="date" name="d" value="${TODAY}" required></label><label class="f req"><span>Disposed by</span><input name="b" value="${esc(me())}" required></label><label class="f full req"><span>Disposal method</span><select name="m" required><option value="">Select…</option><option>Incineration through authorised agency</option><option>Autoclaved & discarded</option><option>Dissolved & drained after neutralisation</option><option>Returned to customer</option><option>Scrapped (metal specimens)</option></select></label></div>`,'Record disposal',f=>{s.actual=f.d;s.by=f.b;s.method=f.m;toast('Disposal recorded.')})};
+// Invoices
+A.invNew=d=>{const r=reg(d.id),q=quote(r.q);const id='INV-26-0'+(++S.seq.inv);S.invoices.unshift({id,reg:r.id,date:TODAY,items:q.items.map(i=>({...i,desc:TESTS[i.code].name})),discount:q.discount,advance:0,relax:'none',status:'Draft',signedBy:null});notify(['signatory'],`Invoice ${id} prepared — awaiting authorization.`,'invoice/'+id);go('invoice/'+id)};
+A.invStatus=d=>{const i=S.invoices.find(x=>x.id===param);i.status=d.v;if(d.v==='Approved')i.signedBy=me();toast(`Invoice ${i.id} → <b>${d.v}</b>`);render()};
+// Approval
+A.apSet=d=>{AP.items[d.i]={...(AP.items[d.i]||{}),v:d.v};saveAP();const y=scrollY;render();scrollTo(0,y)};
+A.apComment=d=>{AP.items[d.i]={...(AP.items[d.i]||{}),c:' '};const y=scrollY;render();scrollTo(0,y);const t=document.querySelector(`[data-in=apC][data-i="${d.i}"]`);t&&(t.value='',t.focus())};
+A.apReset=()=>{if(confirm('Clear all checklist responses and sign-off entries in this browser?')){AP={};saveAP();render()}};
+
+/* ============================ INPUT BINDINGS ============================ */
+const IN={
+ qItem:(el,d)=>{const q=quote(param);const it=q.items[d.i];it[d.k]=['qty','rate'].includes(d.k)?+el.value:el.value;refreshQuote(q)},
+ qTest:(el,d)=>{const q=quote(param),t=TESTS[el.value];Object.assign(q.items[d.i],{code:el.value,method:t.method,spec:t.spec,rate:t.rate});render()},
+ qField:(el,d)=>{quote(param)[d.k]=el.value},
+ qCust:el=>{quote(param).cust=el.value;render()},
+ qDisc:el=>{const q=quote(param);q.discount=+el.value;refreshQuote(q)},
+ dField:(el,d)=>{DRAFT[d.k]=el.value},
+ dTplField:(el,d)=>{DRAFT.fields[d.k]=el.value},
+ dTest:(el,d)=>{DRAFT.tests[d.i][d.k]=el.value;if(d.k==='section')render()},
+ rTest:(el,d)=>{reg(param).tests[d.i][d.k]=el.value;if(d.k==='section')render()},
+ wVal:(el,d)=>{const w=wk(param);w.values[d.i]=el.value===''?undefined:+el.value;w.values=w.values.slice(0,w.reps);$('#statsbox').innerHTML=statsHTML(w);updCalc(w)},
+ wReps:el=>{const w=wk(param);w.reps=+el.value;w.values=w.values.slice(0,w.reps);render()},
+ wField:(el,d)=>{const w=wk(param);w[d.k]=el.value;if(d.k==='result'){const c=comply(w.spec,w.result);$('#compOut').innerHTML=chip(c)||'<span class="faint small">Enter result</span>'}},
+ wCalc:(el,d)=>{const w=wk(param);w.calc[d.k]=+el.value;updCalc(w)},
+ wRow:(el,d)=>{wk(param)[d.t][d.i][d.k]=el.value},
+ rCust:(el,d)=>{const r=reg(param);r.custEdit=r.custEdit||{...cust(r.cust)};r.custEdit[d.k]=el.value;$('#paper').innerHTML=paperHTML(r)},
+ iItem:(el,d)=>{const i=S.invoices.find(x=>x.id===param);i.items[d.i][d.k]=['qty','rate'].includes(d.k)?+el.value:el.value;const a=$('#iamt'+d.i);if(a)a.textContent=inr(i.items[d.i].qty*i.items[d.i].rate);$('#itotals').innerHTML=invTotalsHTML(i)},
+ iRelax:el=>{const i=S.invoices.find(x=>x.id===param);i.relax=el.value;$('#itotals').innerHTML=invTotalsHTML(i)},
+ iAdv:el=>{const i=S.invoices.find(x=>x.id===param);i.advance=+el.value||0;$('#itotals').innerHTML=invTotalsHTML(i)},
+ iDisc:el=>{const i=S.invoices.find(x=>x.id===param);i.discount=+el.value||0;$('#itotals').innerHTML=invTotalsHTML(i)},
+ apC:(el,d)=>{AP.items[d.i]={...(AP.items[d.i]||{}),c:el.value};saveAP()},
+ apS:(el,d)=>{AP.sign[d.k]=el.value;saveAP()},
+};
+function updCalc(w){const F=FORMULAS[w.code],s=stats(w.values);const v=F?F.fn(w.calc):s?s.avg:null;const o=$('#calcOut');if(o)o.textContent=v!=null&&isFinite(v)?round(v,2):'—'}
+const CHANGE={
+ dAddTest:el=>{if(!el.value)return;const t=TESTS[el.value];DRAFT.tests.push({code:el.value,method:t.method,spec:t.spec,section:t.section});render()},
+ analystAs:el=>{ANALYST_AS=el.value;render()},
+ wFiles:el=>{const w=wk(param);[...el.files].forEach(f=>w.files.push({name:f.name,url:URL.createObjectURL(f)}));render();A.tab({i:1},$('.tabs button'))},
+};
+
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act]'); if(!a||a.disabled) return;
+  if(a.tagName==='A'&&a.getAttribute('href'))return;
+  const fn=A[a.dataset.act]; if(!fn) return;
+  if(a.tagName!=='INPUT') e.preventDefault();
+  fn(a.dataset,a,e);
+});
+document.addEventListener('input',e=>{const el=e.target,k=el.dataset.in;if(k&&IN[k]&&el.tagName!=='SELECT')IN[k](el,el.dataset)});
+document.addEventListener('change',e=>{const el=e.target;const k=el.dataset.in;if(k&&IN[k]&&el.tagName==='SELECT')IN[k](el,el.dataset);const c=el.dataset.actChange;if(c&&CHANGE[c])CHANGE[c](el);
+  if(el.id==='custSel'){const c2=cust(el.value);$('#newCust').style.display=el.value==='new'?'grid':'none';const f=$('#mform');if(c2){f.contact.value=c2.contact;f.gst.value=c2.gst}else{f.contact.value='';f.gst.value=''}}
+  if(el.name==='source'){el.closest('.seg').querySelectorAll('label').forEach(l=>l.classList.toggle('on',l.contains(el)))}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)closeModal()});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+$('#roleSel').innerHTML=Object.entries(ROLES).map(([k,r])=>`<option value="${k}">${r.label}</option>`).join('');
+$('#roleSel').value=ROLE;
+$('#roleSel').addEventListener('change',e=>{ROLE=e.target.value;try{localStorage.setItem('lims.role',ROLE)}catch(x){}toast(`Now viewing as <b>${ROLES[ROLE].label}</b> — ${me()}`);render()});
+$('#menuBtn').innerHTML=ic('menu');$('#themeBtn').innerHTML=ic('moon');$('#mClose').innerHTML=ic('x');
+try{const t=localStorage.getItem('lims.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+window.addEventListener('hashchange',render);
+render();
+</script>
+</body>
+</html>

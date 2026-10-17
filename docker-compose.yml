@@ -1,0 +1,52 @@
+# Production-style stack: PostgreSQL + API + web. Put a TLS-terminating reverse proxy
+# (nginx / Caddy / cloud load balancer) in front of the `web` service on port 3000.
+# Secrets come from a .env file next to this compose file (see .env.example) — never commit it.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lims
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d lims"]
+      interval: 10s
+      retries: 5
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/lims?schema=public
+      API_PORT: 4000
+      WEB_ORIGIN: ${WEB_ORIGIN:?set WEB_ORIGIN, e.g. https://lims.lucidlabs.in}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      JWT_TTL_HOURS: ${JWT_TTL_HOURS:-10}
+      STORAGE_DIR: /data/storage
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-LIMS <no-reply@localhost>}
+    volumes:
+      - storage:/data/storage
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args: { API_INTERNAL_URL: http://api:4000 }
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  storage:

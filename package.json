@@ -1,0 +1,35 @@
+{
+  "name": "lucid-labs-lims",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lucid Labs Laboratory Information Management System",
+  "workspaces": [
+    "packages/shared",
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @lims/api",
+    "dev:web": "npm run dev -w @lims/web",
+    "build": "npm run build -w @lims/api && npm run build -w @lims/web",
+    "typecheck": "npm run typecheck -w @lims/shared && npm run typecheck -w @lims/api && npm run typecheck -w @lims/web",
+    "test": "npm run test -w @lims/shared && npm run test -w @lims/api",
+    "db:migrate": "npm run db:migrate -w @lims/api",
+    "db:deploy": "npm run db:deploy -w @lims/api",
+    "db:seed": "npm run db:seed -w @lims/api",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "prisma@6.19.3": true,
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.27.7": true,
+    "esbuild@0.28.2": true
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}

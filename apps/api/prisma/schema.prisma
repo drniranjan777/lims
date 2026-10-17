@@ -1,0 +1,862 @@
+// Lucid Labs LIMS — PostgreSQL schema.
+// Traceability chain (§8): Customer → Enquiry → Quotation → PO → Sample Receipt → Registration
+//   → Registration Test (section, analyst, observations) → Review → Report → Dispatch
+//   → Retained Sample → Disposal ; Quotation/PO/Registration → Invoice → Dispatch.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- enums
+
+enum Role {
+  ADMIN
+  CRM
+  HOD
+  REG_REVIEWER
+  SECTION_APPROVER
+  ANALYST
+  STORES
+  ACCOUNTS
+  SIGNATORY
+}
+
+enum EnquirySource {
+  PHONE
+  MAIL
+  WALK_IN
+  REFERENCE
+  OTHER
+}
+
+enum EnquiryStatus {
+  NEW
+  IN_DISCUSSION
+  QUOTATION_PREPARED
+  CLOSED
+}
+
+enum QuotationStatus {
+  DRAFT
+  INTERNAL_REVIEW
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum GstType {
+  INTRA
+  INTER
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+enum ReceiptStatus {
+  AWAITING_SAMPLE
+  RECEIVED
+  PRE_REGISTERED
+  REGISTERED
+}
+
+enum DispatchMode {
+  COURIER
+  HAND_DELIVERY
+  EMAIL
+  POST
+}
+
+enum RegistrationTemplate {
+  PHARMA
+  MECH
+  OM
+  GEN
+}
+
+enum RegistrationStatus {
+  PRE_REGISTERED
+  REGISTERED
+  IN_TESTING
+  TESTING_COMPLETE
+  REPORTED
+  CANCELLED
+}
+
+enum SectionWorkStatus {
+  PENDING
+  RECEIVED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TestStatus {
+  UNASSIGNED
+  ASSIGNED
+  IN_TESTING
+  SUBMITTED
+  CORRECTION_REQUIRED
+  APPROVED
+}
+
+enum ReportType {
+  FINAL_RESULT
+  MULTI_VALUE
+  INSTRUMENT
+  VALIDATION
+}
+
+enum Conformity {
+  COMPLIES
+  DOES_NOT_COMPLY
+}
+
+enum ChemicalKind {
+  CHEMICAL
+  STANDARD
+  REFERENCE_STANDARD
+  MEDIA
+  REAGENT
+}
+
+enum ReportStatus {
+  DRAFT
+  PREVIEW
+  RELEASED
+  DISPATCHED
+}
+
+enum ReportFormat {
+  STANDARD
+  VALIDATION
+}
+
+enum DispatchStatus {
+  DISPATCHED
+  DELIVERED
+}
+
+enum RetentionStatus {
+  IN_STORE
+  RETENTION_ACTIVE
+  DUE_FOR_DISPOSAL
+  DISPOSED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  APPROVED
+  ISSUED
+  DISPATCHED
+  CANCELLED
+}
+
+enum TaxRelaxation {
+  NONE
+  SEZ_LUT
+  EXPORT_LUT
+  EXEMPT
+}
+
+enum ReviewAction {
+  SUBMIT
+  RETURN
+  APPROVE
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  NOT_CONFIGURED
+}
+
+// ---------------------------------------------------------------- identity & access
+
+model User {
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  designation      String?
+  passwordHash     String
+  active           Boolean   @default(true)
+  failedLogins     Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  passwordChangedAt DateTime @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  roles    UserRole[]
+  sections UserSection[]
+
+  notifications Notification[]
+  assignedTests RegistrationTest[] @relation("TestAnalyst")
+  signatures    Signature[]
+}
+
+model UserRole {
+  userId String
+  role   Role
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+}
+
+model UserSection {
+  userId    String
+  sectionId String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  @@id([userId, sectionId])
+}
+
+/// Electronic signature captured with password re-entry for approvals, releases and authorizations.
+model Signature {
+  id         String   @id @default(cuid())
+  userId     String
+  entityType String
+  entityId   String
+  meaning    String // AUTHORED | REVIEWED | APPROVED | RELEASED | AUTHORIZED
+  signedAt   DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+}
+
+/// Immutable audit trail: who changed what and when, with before/after values.
+model AuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  userId     String?
+  userName   String?
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  reason     String?
+  ip         String?
+
+  @@index([entityType, entityId])
+  @@index([at])
+}
+
+// ---------------------------------------------------------------- configuration & masters
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// Document numbering per series and financial year (e.g. QTN/2026-27/0001).
+model NumberSequence {
+  series    String
+  period    String
+  nextValue Int    @default(1)
+
+  @@id([series, period])
+}
+
+model Section {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users     UserSection[]
+  tests     TestMaster[]
+  equipment Equipment[]
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  address   String?
+  city      String?
+  state     String?
+  stateCode String?
+  pincode   String?
+  gstin     String?
+  email     String?
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts      Contact[]
+  enquiries     Enquiry[]
+  quotations    Quotation[]
+  registrations Registration[]
+  invoices      Invoice[]
+  dispatches    Dispatch[]
+
+  @@index([name])
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  customerId  String
+  name        String
+  designation String?
+  email       String?
+  phone       String?
+  isPrimary   Boolean  @default(false)
+  active      Boolean  @default(true)
+  customer    Customer @relation(fields: [customerId], references: [id])
+}
+
+model Formula {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  name              String
+  expression        String
+  displayExpression String?
+  variables         Json // [{ key, label, unit }]
+  resultUnit        String?
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tests TestMaster[]
+}
+
+model TestMaster {
+  id             String     @id @default(cuid())
+  code           String     @unique
+  name           String
+  sectionId      String
+  method         String
+  specification  String?
+  unit           String?
+  rate           Decimal    @db.Decimal(12, 2)
+  nablAccredited Boolean    @default(false)
+  reportType     ReportType @default(FINAL_RESULT)
+  replicates     Int        @default(1)
+  decimals       Int        @default(2)
+  formulaId      String?
+  active         Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  section Section  @relation(fields: [sectionId], references: [id])
+  formula Formula? @relation(fields: [formulaId], references: [id])
+}
+
+model Equipment {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  name           String
+  make           String?
+  sectionId      String?
+  calibrationDue DateTime? @db.Date
+  active         Boolean   @default(true)
+  section        Section?  @relation(fields: [sectionId], references: [id])
+
+  usages EquipmentUsage[]
+}
+
+model Chemical {
+  id         String       @id @default(cuid())
+  code       String       @unique
+  name       String
+  kind       ChemicalKind @default(CHEMICAL)
+  lotNumber  String?
+  potency    Decimal?     @db.Decimal(10, 4)
+  expiryDate DateTime?    @db.Date
+  active     Boolean      @default(true)
+
+  usages ChemicalUsage[]
+}
+
+// ---------------------------------------------------------------- CRM & commercial
+
+model Enquiry {
+  id               String        @id @default(cuid())
+  number           String        @unique
+  date             DateTime      @db.Date
+  source           EnquirySource
+  customerId       String
+  contactId        String?
+  queryReference   String?
+  projectReference String?
+  receiptDetails   String?
+  courierDetails   String?
+  description      String?
+  status           EnquiryStatus @default(NEW)
+  createdById      String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  tests      EnquiryTest[]
+  quotations Quotation[]
+
+  @@index([status])
+}
+
+model EnquiryTest {
+  enquiryId String
+  testId    String
+  enquiry   Enquiry @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+
+  @@id([enquiryId, testId])
+}
+
+model Quotation {
+  id                     String          @id @default(cuid())
+  number                 String          @unique
+  revision               Int             @default(0)
+  date                   DateTime        @db.Date
+  validUntil             DateTime?       @db.Date
+  enquiryId              String?
+  customerId             String
+  contactId              String?
+  placeOfSupplyStateCode String?
+  gstType                GstType
+  status                 QuotationStatus @default(DRAFT)
+  subtotal               Decimal         @db.Decimal(12, 2)
+  discountType           DiscountType?
+  discountValue          Decimal?        @db.Decimal(12, 2)
+  discountAmount         Decimal         @default(0) @db.Decimal(12, 2)
+  taxable                Decimal         @db.Decimal(12, 2)
+  cgstRate               Decimal         @db.Decimal(5, 2)
+  sgstRate               Decimal         @db.Decimal(5, 2)
+  igstRate               Decimal         @db.Decimal(5, 2)
+  cgst                   Decimal         @db.Decimal(12, 2)
+  sgst                   Decimal         @db.Decimal(12, 2)
+  igst                   Decimal         @db.Decimal(12, 2)
+  roundOff               Decimal         @default(0) @db.Decimal(12, 2)
+  total                  Decimal         @db.Decimal(12, 2)
+  terms                  String?
+  remarks                String?
+  hodReviewedById        String?
+  hodReviewedAt          DateTime?
+  authorizedById         String?
+  authorizedAt           DateTime?
+  sentAt                 DateTime?
+  decidedAt              DateTime?
+  decisionReason         String?
+  createdById            String
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  enquiry        Enquiry?        @relation(fields: [enquiryId], references: [id])
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  items          QuotationItem[]
+  purchaseOrders PurchaseOrder[]
+  receipts       SampleReceipt[]
+  invoices       Invoice[]
+
+  @@index([status])
+}
+
+model QuotationItem {
+  id                String    @id @default(cuid())
+  quotationId       String
+  testId            String?
+  sampleDescription String?
+  testName          String
+  method            String?
+  specification     String?
+  unit              String?
+  sectionId         String?
+  qty               Int
+  rate              Decimal   @db.Decimal(12, 2)
+  amount            Decimal   @db.Decimal(12, 2)
+  sortOrder         Int       @default(0)
+  quotation         Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  quotationId String
+  poNumber    String
+  poDate      DateTime  @db.Date
+  poValue     Decimal?  @db.Decimal(12, 2)
+  remarks     String?
+  attachmentId String?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  quotation Quotation       @relation(fields: [quotationId], references: [id])
+  receipts  SampleReceipt[]
+  invoices  Invoice[]
+
+  @@unique([quotationId, poNumber])
+}
+
+model SampleReceipt {
+  id              String        @id @default(cuid())
+  number          String        @unique
+  quotationId     String
+  purchaseOrderId String?
+  receivedAt      DateTime
+  receivedById    String
+  mode            DispatchMode  @default(COURIER)
+  courierName     String?
+  docketNumber    String?
+  numberOfSamples Int           @default(1)
+  condition       String?
+  remarks         String?
+  status          ReceiptStatus @default(RECEIVED)
+  createdAt       DateTime      @default(now())
+
+  quotation     Quotation      @relation(fields: [quotationId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  registrations Registration[]
+}
+
+// ---------------------------------------------------------------- laboratory
+
+model Registration {
+  id                String               @id @default(cuid())
+  number            String               @unique
+  receiptId         String
+  customerId        String
+  contactId         String?
+  template          RegistrationTemplate
+  sampleName        String
+  sampleDescription String?
+  quantity          String?
+  condition         String?
+  templateData      Json                 @default("{}")
+  remarks           String?
+  status            RegistrationStatus   @default(PRE_REGISTERED)
+  preRegisteredById String
+  preRegisteredAt   DateTime             @default(now())
+  approvedById      String?
+  approvedAt        DateTime?
+  customerNotifiedAt DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  receipt   SampleReceipt         @relation(fields: [receiptId], references: [id])
+  customer  Customer              @relation(fields: [customerId], references: [id])
+  tests     RegistrationTest[]
+  sections  RegistrationSection[]
+  reports   Report[]
+  retained  RetainedSample?
+  invoiceItems InvoiceItem[]
+
+  @@index([status])
+}
+
+/// Per-section work tracking for a registration — drives combined-report completeness (§4.10).
+model RegistrationSection {
+  registrationId String
+  sectionId      String
+  status         SectionWorkStatus @default(PENDING)
+  receivedById   String?
+  receivedAt     DateTime?
+  completedAt    DateTime?
+  registration   Registration      @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@id([registrationId, sectionId])
+  @@index([sectionId, status])
+}
+
+model RegistrationTest {
+  id                    String       @id @default(cuid())
+  registrationId        String
+  sectionId             String
+  testId                String?
+  sourceQuotationItemId String?
+  testName              String
+  method                String
+  specification         String?
+  unit                  String?
+  reportType            ReportType   @default(FINAL_RESULT)
+  replicates            Int          @default(1)
+  decimals              Int          @default(2)
+  nablAccredited        Boolean      @default(false)
+  formulaId             String?
+  formulaSnapshot       Json?
+  status                TestStatus   @default(UNASSIGNED)
+  analystId             String?
+  assignedById          String?
+  assignedAt            DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  observations          Json?        // { replicates: [{var: value}], computed: [..] }
+  rawData               String?
+  readingNotes          String?
+  environment           String?
+  calculatedValue       Decimal?     @db.Decimal(20, 6)
+  finalResult           String?
+  conformity            Conformity?
+  remarks               String?
+  submittedAt           DateTime?
+  reviewedById          String?
+  reviewedAt            DateTime?
+  reviewComments        String?
+  sortOrder             Int          @default(0)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  registration Registration     @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  analyst      User?            @relation("TestAnalyst", fields: [analystId], references: [id])
+  chemicals    ChemicalUsage[]
+  equipment    EquipmentUsage[]
+  reviewEvents TestReviewEvent[]
+
+  @@index([sectionId, status])
+  @@index([analystId, status])
+}
+
+model ChemicalUsage {
+  id         String           @id @default(cuid())
+  testId     String
+  chemicalId String
+  lotNumber  String?
+  quantity   Decimal?         @db.Decimal(12, 4)
+  unit       String?
+  remarks    String?
+  createdAt  DateTime         @default(now())
+  test       RegistrationTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  chemical   Chemical         @relation(fields: [chemicalId], references: [id])
+}
+
+model EquipmentUsage {
+  id                String           @id @default(cuid())
+  testId            String
+  equipmentId       String
+  usedFrom          DateTime?
+  usedTo            DateTime?
+  calibrationDueAtUse DateTime?      @db.Date
+  remarks           String?
+  createdAt         DateTime         @default(now())
+  test              RegistrationTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  equipment         Equipment        @relation(fields: [equipmentId], references: [id])
+}
+
+model TestReviewEvent {
+  id        String           @id @default(cuid())
+  testId    String
+  action    ReviewAction
+  comments  String?
+  byId      String
+  byName    String
+  at        DateTime         @default(now())
+  test      RegistrationTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+}
+
+/// Files: instrument images, peaks, graphs, raw-data exports, PO copies, signed report PDFs.
+model Attachment {
+  id            String   @id @default(cuid())
+  entityType    String
+  entityId      String
+  kind          String   @default("DOCUMENT") // IMAGE | PEAK | GRAPH | RAW_DATA | DOCUMENT | REPORT_PDF
+  fileName      String
+  mimeType      String
+  size          Int
+  storageKey    String
+  sha256        String
+  caption       String?
+  includeInReport Boolean @default(false)
+  uploadedById  String
+  createdAt     DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+// ---------------------------------------------------------------- reports & dispatch
+
+model Report {
+  id                   String       @id @default(cuid())
+  number               String
+  revision             Int          @default(0)
+  registrationId       String
+  sectionId            String?      // null = combined report across all sections
+  format               ReportFormat @default(STANDARD)
+  includeNabl          Boolean      @default(false)
+  includeSpecification Boolean      @default(true)
+  status               ReportStatus @default(DRAFT)
+  issuedToName         String
+  issuedToAddress      String?
+  issuedToContact      String?
+  remarks              String?
+  validationSummary    String?
+  contentSnapshot      Json?        // frozen report content at release
+  pdfAttachmentId      String?
+  previewedById        String?
+  previewedAt          DateTime?
+  releasedById         String?
+  releasedAt           DateTime?
+  createdById          String
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  registration  Registration   @relation(fields: [registrationId], references: [id])
+  dispatchItems DispatchItem[]
+
+  @@unique([number, revision])
+  @@index([status])
+}
+
+model Dispatch {
+  id               String         @id @default(cuid())
+  number           String         @unique
+  customerId       String
+  dispatchDate     DateTime       @db.Date
+  dispatchedById   String
+  dispatchedByName String
+  mode             DispatchMode
+  courierName      String?
+  docketNumber     String?
+  remarks          String?
+  combinedVerifiedById String?
+  status           DispatchStatus @default(DISPATCHED)
+  receivedDate     DateTime?      @db.Date
+  receivedByName   String?
+  createdAt        DateTime       @default(now())
+
+  customer Customer       @relation(fields: [customerId], references: [id])
+  items    DispatchItem[]
+}
+
+model DispatchItem {
+  id         String   @id @default(cuid())
+  dispatchId String
+  reportId   String?
+  invoiceId  String?
+  dispatch   Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  report     Report?  @relation(fields: [reportId], references: [id])
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
+}
+
+// ---------------------------------------------------------------- stores
+
+model RetainedSample {
+  id                  String          @id @default(cuid())
+  registrationId      String          @unique
+  receivedInStoreAt   DateTime
+  receivedById        String
+  receivedByName      String
+  storageLocation     String?
+  quantity            String?
+  retentionMonths     Int
+  plannedDisposalDate DateTime        @db.Date
+  status              RetentionStatus @default(RETENTION_ACTIVE)
+  disposedAt          DateTime?       @db.Date
+  disposalMethod      String?
+  disposedById        String?
+  disposedByName      String?
+  remarks             String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+
+  @@index([status, plannedDisposalDate])
+}
+
+// ---------------------------------------------------------------- invoicing
+
+model Invoice {
+  id                     String        @id @default(cuid())
+  number                 String?       @unique // assigned on issue
+  draftNumber            String        @unique
+  date                   DateTime      @db.Date
+  customerId             String
+  contactId              String?
+  quotationId            String?
+  purchaseOrderId        String?
+  customerGstin          String?
+  placeOfSupplyStateCode String?
+  gstType                GstType
+  taxRelaxation          TaxRelaxation @default(NONE)
+  relaxationReference    String?
+  subtotal               Decimal       @db.Decimal(12, 2)
+  discountType           DiscountType?
+  discountValue          Decimal?      @db.Decimal(12, 2)
+  discountAmount         Decimal       @default(0) @db.Decimal(12, 2)
+  taxable                Decimal       @db.Decimal(12, 2)
+  cgstRate               Decimal       @db.Decimal(5, 2)
+  sgstRate               Decimal       @db.Decimal(5, 2)
+  igstRate               Decimal       @db.Decimal(5, 2)
+  cgst                   Decimal       @db.Decimal(12, 2)
+  sgst                   Decimal       @db.Decimal(12, 2)
+  igst                   Decimal       @db.Decimal(12, 2)
+  roundOff               Decimal       @default(0) @db.Decimal(12, 2)
+  total                  Decimal       @db.Decimal(12, 2)
+  poValue                Decimal?      @db.Decimal(12, 2)
+  advanceReceived        Decimal       @default(0) @db.Decimal(12, 2)
+  advanceReference       String?
+  balanceDue             Decimal       @db.Decimal(12, 2)
+  terms                  String?
+  remarks                String?
+  status                 InvoiceStatus @default(DRAFT)
+  approvedById           String?
+  approvedAt             DateTime?
+  issuedAt               DateTime?
+  cancelledReason        String?
+  createdById            String
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  quotation     Quotation?     @relation(fields: [quotationId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  items         InvoiceItem[]
+  dispatchItems DispatchItem[]
+
+  @@index([status])
+}
+
+model InvoiceItem {
+  id             String        @id @default(cuid())
+  invoiceId      String
+  registrationId String?
+  description    String
+  sacCode        String?
+  qty            Int
+  rate           Decimal       @db.Decimal(12, 2)
+  amount         Decimal       @db.Decimal(12, 2)
+  sortOrder      Int           @default(0)
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  registration   Registration? @relation(fields: [registrationId], references: [id])
+}
+
+// ---------------------------------------------------------------- notifications
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model EmailOutbox {
+  id         String      @id @default(cuid())
+  to         String
+  subject    String
+  body       String
+  status     EmailStatus @default(PENDING)
+  error      String?
+  entityType String?
+  entityId   String?
+  attempts   Int         @default(0)
+  sentAt     DateTime?
+  createdAt  DateTime    @default(now())
+
+  @@index([status])
+}
