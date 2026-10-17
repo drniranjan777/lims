@@ -41,8 +41,8 @@ interface Dashboard {
 
 const RANGES: Record<Range, { label: string; vs: string; period: string }> = {
   today: { label: 'Today', vs: 'vs. yesterday', period: 'Today' },
-  week: { label: 'Last 7 days', vs: 'vs. previous 7 days', period: 'Last 7 days' },
-  month: { label: 'Last 30 days', vs: 'vs. previous 30 days', period: 'Last 30 days' },
+  week: { label: 'Last 7 days', vs: 'vs. prior 7 days', period: 'Last 7 days' },
+  month: { label: 'Last 30 days', vs: 'vs. prior 30 days', period: 'Last 30 days' },
 };
 
 /** Tile tints, in fixed order — validated categorical palette (see globals.css --t-*). */
@@ -134,6 +134,7 @@ function Sparkline({ series, label }: { series: Flow['series']; label: string })
     <div className="spark">
       <svg
         viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
         role="img"
         aria-label={`${label}: ${total} over the last ${series.length} days`}
         onPointerMove={(e) => {
@@ -145,7 +146,7 @@ function Sparkline({ series, label }: { series: Flow['series']; label: string })
         <path d={`${line} L${x(last)},${H} L${x(0)},${H} Z`} className="area" />
         <path d={line} className="line" />
         {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={2} y2={H} className="guide" />}
-        <circle cx={x(shown)} cy={y(series[shown]!.n)} r={3} className="dot" />
+        <path d={`M${x(shown)},${y(series[shown]!.n)}h0`} className="dot" />
       </svg>
       {hover !== null && (
         <span className="spark-tip">
@@ -240,42 +241,45 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="dash-head">
-        <div>
-          <h1>
-            {greeting()}, {me?.name}
-          </h1>
-          <p className="muted">Your laboratory operations at a glance. Here’s what’s happening {range === 'today' ? 'today' : `over the ${RANGES[range].label.toLowerCase()}`}.</p>
+      <section className="dash-hero">
+        <div className="dash-head">
+          <div>
+            <h1>
+              {greeting()}, {me?.name}
+            </h1>
+            <p className="muted">Your laboratory operations at a glance. Here’s what’s happening {range === 'today' ? 'today' : `over the ${RANGES[range].label.toLowerCase()}`}.</p>
+          </div>
+          <div className="dash-tagline" aria-hidden>
+            <span>
+              Accurate results
+              <br />
+              for a healthier tomorrow
+            </span>
+          </div>
+          <div className="dash-actions">
+            <label className="range-select">
+              <CalendarDays size={17} aria-hidden />
+              <select value={range} onChange={(e) => setRange(e.target.value as Range)} aria-label="Date range">
+                {(Object.keys(RANGES) as Range[]).map((r) => (
+                  <option key={r} value={r}>
+                    {RANGES[r].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="btn pri" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw size={16} className={isFetching ? 'spin' : undefined} aria-hidden /> Refresh
+            </button>
+          </div>
         </div>
-        <div className="dash-tagline" aria-hidden>
-          <span>
-            Accurate results
-            <br />
-            for a healthier tomorrow
-          </span>
-          <svg viewBox="0 0 120 70" className="glassware">
-            <path d="M44 6h14M47 6v20L33 56a6 6 0 0 0 5.5 8.5h25A6 6 0 0 0 69 56L55 26V6" />
-            <path d="M38 46h26" />
-            <path d="M80 14v44a6 6 0 0 0 12 0V14M77 14h18M88 30v24" />
-            <path d="M100 22v36a5 5 0 0 0 10 0V22M97 22h16" />
-          </svg>
-        </div>
-        <div className="dash-actions">
-          <label className="range-select">
-            <CalendarDays size={17} aria-hidden />
-            <select value={range} onChange={(e) => setRange(e.target.value as Range)} aria-label="Date range">
-              {(Object.keys(RANGES) as Range[]).map((r) => (
-                <option key={r} value={r}>
-                  {RANGES[r].label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="btn pri" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw size={16} className={isFetching ? 'spin' : undefined} aria-hidden /> Refresh
-          </button>
-        </div>
-      </div>
+        {data && (
+          <div className="kpis">
+            {KPIS.map((k) => (
+              <Kpi key={k.key} k={k} data={data.kpis[k.key]} range={range} />
+            ))}
+          </div>
+        )}
+      </section>
 
       {isLoading ? (
         <Loading />
@@ -283,12 +287,6 @@ export default function DashboardPage() {
         <ErrorBox error={error} />
       ) : data ? (
         <>
-          <div className="kpis">
-            {KPIS.map((k) => (
-              <Kpi key={k.key} k={k} data={data.kpis[k.key]} range={range} />
-            ))}
-          </div>
-
           <Card title="End-to-end workflow pipeline" className="mt" actions={canAny(['reg.pre', 'reg.approve', 'sec.assign']) && <ViewAll href="/registrations">View registrations</ViewAll>}>
             <ol className="flow">
               {data.pipeline.map((p) => {

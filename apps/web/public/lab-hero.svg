@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="250 0 510 300" fill="none">
+  <defs>
+    <linearGradient id="liquid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7cc4f4" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#1f6fd1" stop-opacity=".65"/>
+    </linearGradient>
+    <linearGradient id="liquid2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5ed6c0" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#0a9a7f" stop-opacity=".6"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset=".5" stop-color="#e3f0fb" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity=".5"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#9fd2f7" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#9fd2f7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- soft light / bokeh -->
+  <circle cx="470" cy="70" r="120" fill="url(#glow)"/>
+  <circle cx="690" cy="40" r="70" fill="url(#glow)"/>
+  <circle cx="300" cy="230" r="34" fill="#cfe6f9" opacity=".45"/>
+  <circle cx="610" cy="250" r="22" fill="#cfe6f9" opacity=".5"/>
+  <circle cx="380" cy="60" r="14" fill="#ffffff" opacity=".6"/>
+
+  <!-- retort stand -->
+  <path d="M640 14v276" stroke="#a9c7e3" stroke-width="5" stroke-linecap="round"/>
+  <path d="M640 64h-58" stroke="#a9c7e3" stroke-width="4" stroke-linecap="round"/>
+  <rect x="560" y="56" width="26" height="16" rx="4" fill="#b8d3ec"/>
+
+  <!-- burette held by the stand -->
+  <rect x="566" y="0" width="14" height="150" rx="5" fill="url(#glass)" stroke="#9cc3e8" stroke-width="2"/>
+  <rect x="569" y="70" width="8" height="78" rx="3" fill="url(#liquid)"/>
+  <path d="M573 150v22" stroke="#9cc3e8" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Erlenmeyer flask -->
+  <path d="M520 150h46v52l44 76a10 10 0 0 1-9 15H485a10 10 0 0 1-9-15l44-76z" fill="url(#glass)" stroke="#8fbbe6" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M499 238h88l18 32a8 8 0 0 1-7 12H488a8 8 0 0 1-7-12z" fill="url(#liquid)"/>
+  <path d="M514 144h58" stroke="#8fbbe6" stroke-width="4" stroke-linecap="round"/>
+  <path d="M530 170v40l-30 52" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+
+  <!-- beaker -->
+  <path d="M664 170h70v108a12 12 0 0 1-12 12h-46a12 12 0 0 1-12-12z" fill="url(#glass)" stroke="#8fbbe6" stroke-width="2.5"/>
+  <path d="M666 224h66v54a10 10 0 0 1-10 10h-46a10 10 0 0 1-10-10z" fill="url(#liquid2)"/>
+  <path d="M658 170h82" stroke="#8fbbe6" stroke-width="4" stroke-linecap="round"/>
+  <path d="M676 186v86" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+  <path d="M716 196h14M716 214h14M720 205h10" stroke="#8fbbe6" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- test-tube rack -->
+  <g>
+    <rect x="330" y="214" width="140" height="12" rx="4" fill="#b8d3ec"/>
+    <rect x="330" y="276" width="140" height="12" rx="4" fill="#b8d3ec"/>
+    <path d="M338 226v50M462 226v50" stroke="#b8d3ec" stroke-width="6"/>
+    <g stroke="#8fbbe6" stroke-width="2.2">
+      <path d="M352 150v118a10 10 0 0 0 20 0V150z" fill="url(#glass)"/>
+      <path d="M384 166v102a10 10 0 0 0 20 0V166z" fill="url(#glass)"/>
+      <path d="M416 140v128a10 10 0 0 0 20 0V140z" fill="url(#glass)"/>
+      <path d="M448 172v96a10 10 0 0 0 20 0V172z" fill="url(#glass)" transform="translate(-6 0)"/>
+    </g>
+    <path d="M354 206v62a8 8 0 0 0 16 0v-62z" fill="url(#liquid)"/>
+    <path d="M386 232v36a8 8 0 0 0 16 0v-36z" fill="url(#liquid2)"/>
+    <path d="M418 196v72a8 8 0 0 0 16 0v-72z" fill="url(#liquid)"/>
+    <path d="M444 240v28a8 8 0 0 0 16 0v-28z" fill="url(#liquid2)"/>
+  </g>
+
+  <!-- bench -->
+  <path d="M250 296h510" stroke="#c9dcef" stroke-width="3" stroke-linecap="round"/>
+</svg>

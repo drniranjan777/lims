@@ -312,6 +312,8 @@ test('full workflow from enquiry to sample retention', async ({ browser }) => {
   await test.step('Top-bar search finds the sample by its registration number', async () => {
     const reg = await users.as('reg');
     await reg.goto('/');
+    // The shortcut is registered once the signed-in shell has rendered.
+    await expect(reg.getByLabel('Search samples')).toBeVisible();
     await reg.keyboard.press('Control+k');
     await expect(reg.getByLabel('Search samples')).toBeFocused();
     await reg.keyboard.type(regNumber);
