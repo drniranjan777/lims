@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useState, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { ApiError } from '@/lib/api';
 import { statusLabel, statusTone } from '@/lib/format';
 
@@ -205,3 +205,21 @@ export function Steps({ steps, current }: { steps: string[]; current: number }) 
 
 /** Field-error lookup for an ApiError returned by a form submission. */
 export const fieldErr = (e: unknown, k: string) => (e instanceof ApiError ? e.fields[k] : undefined);
+
+/** Open state for a dropdown anchored in `ref`; closes on an outside click or Escape. */
+export function usePopover<T extends HTMLElement = HTMLDivElement>() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    if (!open) return;
+    const click = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', click);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('mousedown', click);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open]);
+  return { open, setOpen, ref };
+}

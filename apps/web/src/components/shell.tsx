@@ -5,52 +5,59 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Permission } from '@lims/shared';
+import {
+  Archive, Bell as BellIcon, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, ClipboardPen, Database, FileText, FlaskConical, History,
+  House, LayoutDashboard, LogOut, Mail, Menu, MessageSquareText, Network, PackageCheck, ReceiptIndianRupee, Search, Settings, ShieldCheck, Truck, UserCog, UserRound, Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { api, type Paged } from '@/lib/api';
 import { fmtDateTime } from '@/lib/format';
 import { useCan, useMe } from './providers';
-import { Loading } from './ui';
+import { Loading, usePopover } from './ui';
 
-type NavItem = { href: string; label: string; any: Permission[] | 'all' };
+type NavItem = { href: string; label: string; icon: LucideIcon; any: Permission[] | 'all' };
 const NAV: { group: string; items: NavItem[] }[] = [
-  { group: 'Overview', items: [{ href: '/', label: 'Dashboard', any: 'all' }] },
+  { group: 'Overview', items: [{ href: '/', label: 'Dashboard', icon: LayoutDashboard, any: 'all' }] },
   {
     group: 'Customer & Commercial',
     items: [
-      { href: '/customers', label: 'Customers', any: ['enq.create', 'masters.manage'] },
-      { href: '/enquiries', label: 'CRM Enquiries', any: ['enq.create', 'quote.edit'] },
-      { href: '/quotations', label: 'Quotations', any: ['quote.edit', 'quote.review', 'quote.authorize', 'invoice.edit'] },
-      { href: '/samples', label: 'PO & Sample Receipt', any: ['po.record'] },
+      { href: '/customers', label: 'Customers', icon: Users, any: ['enq.create', 'masters.manage'] },
+      { href: '/enquiries', label: 'CRM Enquiries', icon: MessageSquareText, any: ['enq.create', 'quote.edit'] },
+      { href: '/quotations', label: 'Quotations', icon: FileText, any: ['quote.edit', 'quote.review', 'quote.authorize', 'invoice.edit'] },
+      { href: '/samples', label: 'PO & Sample Receipt', icon: PackageCheck, any: ['po.record'] },
     ],
   },
   {
     group: 'Laboratory',
     items: [
-      { href: '/registrations', label: 'Registration', any: ['reg.pre', 'reg.approve', 'test.editMethod', 'sec.assign'] },
-      { href: '/section', label: 'Section Workbench', any: ['sec.assign'] },
-      { href: '/analyst', label: 'Analyst Workbench', any: ['test.enter'] },
-      { href: '/review', label: 'Review & Approval', any: ['test.review'] },
-      { href: '/reports', label: 'Reports', any: ['report.release', 'report.editCustomer', 'dispatch.record'] },
+      { href: '/registrations', label: 'Registration', icon: ClipboardPen, any: ['reg.pre', 'reg.approve', 'test.editMethod', 'sec.assign'] },
+      { href: '/section', label: 'Section Workbench', icon: Network, any: ['sec.assign'] },
+      { href: '/analyst', label: 'Analyst Workbench', icon: FlaskConical, any: ['test.enter'] },
+      { href: '/review', label: 'Review & Approval', icon: ShieldCheck, any: ['test.review'] },
+      { href: '/reports', label: 'Reports', icon: ClipboardList, any: ['report.release', 'report.editCustomer', 'dispatch.record'] },
     ],
   },
   {
     group: 'Closure',
     items: [
-      { href: '/dispatch', label: 'Dispatch', any: ['dispatch.record'] },
-      { href: '/stores', label: 'Stores · Retention', any: ['stores.manage'] },
-      { href: '/invoices', label: 'Tax Invoices', any: ['invoice.edit', 'invoice.authorize'] },
+      { href: '/dispatch', label: 'Dispatch', icon: Truck, any: ['dispatch.record'] },
+      { href: '/stores', label: 'Stores & Retention', icon: Archive, any: ['stores.manage'] },
+      { href: '/invoices', label: 'Tax Invoices', icon: ReceiptIndianRupee, any: ['invoice.edit', 'invoice.authorize'] },
     ],
   },
   {
     group: 'Administration',
     items: [
-      { href: '/admin/masters', label: 'Master data', any: ['masters.manage'] },
-      { href: '/admin/users', label: 'Users & roles', any: ['users.manage'] },
-      { href: '/admin/settings', label: 'Lab settings', any: ['masters.manage'] },
-      { href: '/admin/audit', label: 'Audit trail', any: ['audit.view'] },
-      { href: '/admin/outbox', label: 'E-mail outbox', any: ['users.manage'] },
+      { href: '/admin/users', label: 'Users & Roles', icon: UserCog, any: ['users.manage'] },
+      { href: '/admin/masters', label: 'Master Data', icon: Database, any: ['masters.manage'] },
+      { href: '/admin/audit', label: 'Audit Trail', icon: History, any: ['audit.view'] },
+      { href: '/admin/settings', label: 'Settings', icon: Settings, any: ['masters.manage'] },
+      { href: '/admin/outbox', label: 'E-mail Outbox', icon: Mail, any: ['users.manage'] },
     ],
   },
 ];
+const ALL_ITEMS = NAV.flatMap((g) => g.items);
+const COLLAPSED_KEY = 'nlims.sidebar.collapsed';
 
 interface Notification {
   id: string;
@@ -62,8 +69,7 @@ interface Notification {
 }
 
 function Bell() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const { open, setOpen, ref } = usePopover();
   const qc = useQueryClient();
   const router = useRouter();
   const { data } = useQuery({
@@ -71,11 +77,6 @@ function Bell() {
     queryFn: () => api.get<Paged<Notification> & { unread: number }>('/notifications?pageSize=12'),
     refetchInterval: 30_000,
   });
-  useEffect(() => {
-    const h = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
   const openItem = async (n: Notification) => {
     if (!n.readAt) await api.post(`/notifications/${n.id}/read`);
     qc.invalidateQueries({ queryKey: ['notifications'] });
@@ -83,11 +84,9 @@ function Bell() {
     if (n.link) router.push(n.link);
   };
   return (
-    <div className="bell" ref={ref} style={{ position: 'relative' }}>
-      <button className="btn ghost icon" aria-label={`Notifications (${data?.unread ?? 0} unread)`} onClick={() => setOpen((o) => !o)}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-        </svg>
+    <div className="pop" ref={ref}>
+      <button className="btn ghost icon bell" aria-label={`Notifications (${data?.unread ?? 0} unread)`} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <BellIcon size={19} aria-hidden />
         {!!data?.unread && <span className="dot">{data.unread > 99 ? '99+' : data.unread}</span>}
       </button>
       {open && (
@@ -124,14 +123,117 @@ function Bell() {
   );
 }
 
+/** Sample search (registration number, sample name, customer) — Ctrl/⌘ + K focuses it. */
+function SampleSearch() {
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const [q, setQ] = useState('');
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        input.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, []);
+  return (
+    <form
+      className="top-search"
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        router.push(`/registrations?q=${encodeURIComponent(q.trim())}`);
+      }}
+    >
+      <Search size={17} aria-hidden />
+      <input ref={input} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search sample ID, sample, customer…" aria-label="Search samples" />
+      <kbd aria-hidden>Ctrl K</kbd>
+    </form>
+  );
+}
+
+function SectionsMenu({ sections }: { sections: { id: string; name: string }[] }) {
+  const { open, setOpen, ref } = usePopover();
+  const can = useCan();
+  return (
+    <div className="pop crumb-sections" ref={ref}>
+      <button className="crumb-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="truncate">Sections: {sections.map((s) => s.name).join(', ')}</span>
+        <ChevronDown size={15} aria-hidden />
+      </button>
+      {open && (
+        <div className="dropdown narrow">
+          <div className="item small muted">Your sections</div>
+          {sections.map((s) =>
+            can('sec.assign') ? (
+              <Link key={s.id} href="/section" className="item" onClick={() => setOpen(false)}>
+                {s.name}
+              </Link>
+            ) : (
+              <div key={s.id} className="item">
+                {s.name}
+              </div>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserMenu({ name, roles }: { name: string; roles: string[] }) {
+  const { open, setOpen, ref } = usePopover();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
+  const logout = async () => {
+    await api.post('/auth/logout');
+    qc.clear();
+    router.replace('/login');
+  };
+  return (
+    <div className="pop" ref={ref}>
+      <button className="user-btn" aria-label={`Account menu for ${name}`} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="avatar" aria-hidden>
+          {initials}
+        </span>
+        <span className="who">
+          <b>{name}</b>
+          <small>{roles.join(', ')}</small>
+        </span>
+        <ChevronDown size={16} aria-hidden />
+      </button>
+      {open && (
+        <div className="dropdown narrow">
+          <Link href="/account" className="item row" onClick={() => setOpen(false)}>
+            <UserRound size={16} aria-hidden /> Account
+          </Link>
+          <button className="item row" onClick={logout}>
+            <LogOut size={16} aria-hidden /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Shell({ children }: { children: ReactNode }) {
   const { data: me, isLoading, error } = useMe();
   const can = useCan();
   const path = usePathname();
   const router = useRouter();
-  const qc = useQueryClient();
   const [navOpen, setNavOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   useEffect(() => setNavOpen(false), [path]);
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSED_KEY) === '1');
+    } catch {
+      /* storage unavailable — keep the default */
+    }
+  }, []);
   useEffect(() => {
     if (error) router.replace(`/login?next=${encodeURIComponent(path)}`);
   }, [error, router, path]);
@@ -140,31 +242,40 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const visible = (i: NavItem) => i.any === 'all' || i.any.some((p) => can(p));
   const active = (href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(href + '/'));
-  const logout = async () => {
-    await api.post('/auth/logout');
-    qc.clear();
-    router.replace('/login');
+  const current = ALL_ITEMS.filter((i) => active(i.href)).sort((a, b) => b.href.length - a.href.length)[0];
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
+    } catch {
+      /* storage unavailable — the choice lasts for this page only */
+    }
   };
+  // On small screens the menu button opens the off-canvas sidebar; on desktop it collapses it to icons.
+  const menuToggle = () => (window.matchMedia('(max-width: 900px)').matches ? setNavOpen(true) : toggleCollapsed());
 
   return (
-    <div className="shell">
+    <div className={`shell ${collapsed ? 'collapsed' : ''}`}>
       <aside className={`side ${navOpen ? 'open' : ''}`} aria-label="Main navigation">
-        <div className="brand">
-          <div className="brand-mark">LL</div>
-          <div>
-            <b>Lucid Labs</b>
-            <small>LIMS</small>
-          </div>
+        <div className="side-head">
+          <Link href="/" className="brand">
+            <img src="/logo-on-dark.png" alt="NLIMS — Lab Management System" width={640} height={152} />
+          </Link>
+          <button className="side-toggle" onClick={() => (navOpen ? setNavOpen(false) : toggleCollapsed())} aria-label={navOpen ? 'Close menu' : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            {collapsed && !navOpen ? <ChevronsRight size={16} aria-hidden /> : <ChevronsLeft size={16} aria-hidden />}
+          </button>
         </div>
         {NAV.map((g) => {
           const items = g.items.filter(visible);
           if (!items.length) return null;
           return (
-            <nav className="nav-group" key={g.group}>
+            <nav className="nav-group" key={g.group} aria-label={g.group}>
               <div>{g.group}</div>
               {items.map((i) => (
-                <Link key={i.href} href={i.href} className={`nav-link ${active(i.href) ? 'on' : ''}`} aria-current={active(i.href) ? 'page' : undefined}>
-                  {i.label}
+                <Link key={i.href} href={i.href} title={collapsed ? i.label : undefined} className={`nav-link ${active(i.href) ? 'on' : ''}`} aria-current={active(i.href) ? 'page' : undefined}>
+                  <i.icon size={18} strokeWidth={1.8} aria-hidden />
+                  <span>{i.label}</span>
                 </Link>
               ))}
             </nav>
@@ -173,21 +284,24 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
       <div className="main">
         <header className="topbar">
-          <button className="btn ghost icon menu-btn" aria-label="Open menu" onClick={() => setNavOpen(true)}>
-            ☰
+          <button className="btn ghost icon" aria-label="Toggle menu" onClick={menuToggle}>
+            <Menu size={19} aria-hidden />
           </button>
-          <div className="grow small muted">{me.sections.length ? `Sections: ${me.sections.map((s) => s.name).join(', ')}` : ''}</div>
+          <nav className="crumbs-top" aria-label="Breadcrumb">
+            <Link href={current?.href ?? '/'} className="crumb-home">
+              <House size={17} aria-hidden />
+              <span>{current?.label ?? 'Dashboard'}</span>
+            </Link>
+            {me.sections.length > 0 && (
+              <>
+                <ChevronRight size={15} className="faint" aria-hidden />
+                <SectionsMenu sections={me.sections} />
+              </>
+            )}
+          </nav>
+          {can('reg.pre') || can('reg.approve') || can('sec.assign') ? <SampleSearch /> : <div className="grow" />}
           <Bell />
-          <div className="small" style={{ textAlign: 'right', lineHeight: 1.25 }}>
-            <div className="bold">{me.name}</div>
-            <div className="muted">{me.roleLabels.join(', ')}</div>
-          </div>
-          <Link className="btn sm" href="/account">
-            Account
-          </Link>
-          <button className="btn sm" onClick={logout}>
-            Sign out
-          </button>
+          <UserMenu name={me.name} roles={me.roleLabels} />
         </header>
         <main className="content">{children}</main>
       </div>

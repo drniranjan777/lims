@@ -22,7 +22,7 @@ test('role-based navigation: CRM sees the commercial screens but not administrat
   const nav = page.locator('aside .nav-link');
   await expect(nav).toContainText(['Dashboard', 'Customers', 'CRM Enquiries', 'Quotations', 'PO & Sample Receipt', 'Registration', 'Reports', 'Dispatch']);
   await expect(nav.filter({ hasText: 'Analyst Workbench' })).toHaveCount(0);
-  await expect(nav.filter({ hasText: 'Users & roles' })).toHaveCount(0);
+  await expect(nav.filter({ hasText: 'Users & Roles' })).toHaveCount(0);
 });
 
 test('full workflow from enquiry to sample retention', async ({ browser }) => {
@@ -307,6 +307,35 @@ test('full workflow from enquiry to sample retention', async ({ browser }) => {
     const reg = await users.as('reg');
     await reg.goto(regUrl);
     await expectStatus(reg, 'Reported');
+  });
+
+  await test.step('Top-bar search finds the sample by its registration number', async () => {
+    const reg = await users.as('reg');
+    await reg.goto('/');
+    await reg.keyboard.press('Control+k');
+    await expect(reg.getByLabel('Search samples')).toBeFocused();
+    await reg.keyboard.type(regNumber);
+    await reg.keyboard.press('Enter');
+    await expect(reg).toHaveURL(/\/registrations\?q=/);
+    await expect(reg.locator('table.t tbody tr')).toHaveCount(1);
+    await expect(reg.locator('table.t tbody')).toContainText(regNumber);
+  });
+
+  await test.step('Dashboard shows live KPIs, section progress and recent activity', async () => {
+    const sig = await users.as('sig');
+    await sig.goto('/');
+    await expect(sig.locator('.kpi')).toHaveCount(4);
+    // The only sample is already reported, so no sample is active any more.
+    await expect(sig.locator('.kpi', { hasText: 'Active samples' }).locator('.kpi-value')).toHaveText('0');
+    await expect(sig.locator('.flow > li')).toHaveCount(7);
+    // Both tests were approved but the sample is now reported, so no section has active tests.
+    await expect(sig.locator('.workload li', { hasText: 'Chemical' })).toContainText('No active tests');
+    const recent = sig.locator('.card', { hasText: 'Recent activity' });
+    await expect(recent.locator('tbody tr').first()).toContainText(regNumber);
+    await expect(recent.locator('tbody tr').first()).toContainText('Report released');
+    await sig.getByLabel('Date range').selectOption('week');
+    await expect(sig.locator('.flow > li', { hasText: 'Reports released' }).locator('.flow-count')).toHaveText('1');
+    await expect(sig.locator('.flow > li', { hasText: 'Reports released' })).toContainText('Last 7 days');
   });
 
   await users.close();

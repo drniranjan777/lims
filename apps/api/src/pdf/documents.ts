@@ -3,7 +3,7 @@ import { amountInWords, formatINR, REPORT_TYPE_LABELS, TAX_RELAXATION_LABELS, ty
 import { fmtDate, fmtDateTime } from '../lib/dates';
 import { renderPdf } from './printer';
 
-const C = { primary: '#0d6b69', muted: '#5d6977', border: '#d3d9df', soft: '#e0f0ef', bad: '#b3261e' };
+const C = { primary: '#094f8b', muted: '#5d6977', border: '#d3d9df', soft: '#e4eef8', bad: '#b3261e' };
 const num = (v: unknown) => Number(v ?? 0);
 const txt = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v));
 

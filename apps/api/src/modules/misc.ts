@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { prisma, type Prisma } from '../lib/prisma';
+import { prisma, Prisma } from '../lib/prisma';
 import { ilike, listQuery, paged, param } from '../lib/http';
 import { forbidden, notFound } from '../lib/errors';
 import { can, currentUser, labScope, requirePerm } from '../lib/auth';
 import { readFile } from '../lib/storage';
 import { todayDate, addDays } from '../lib/dates';
 
-// ---------------------------------------------------------------- dashboard (§6) — live counts only
+// ---------------------------------------------------------------- dashboard (§6) — live data only
 
 export const dashboardRouter = Router();
 
@@ -63,34 +63,148 @@ dashboardRouter.get('/', async (req, res) => {
   const results = await Promise.all(jobs.map(([, p]) => p));
   jobs.forEach(([k], i) => (counts[k] = results[i]));
 
-  // Lab-wide workload by section and status (scoped).
-  const workload = await prisma.registrationTest.groupBy({
-    by: ['sectionId', 'status'],
-    where: { status: { not: 'APPROVED' }, registration: { status: { notIn: ['CANCELLED', 'PRE_REGISTERED'] } }, ...sectionWhere },
-    _count: { _all: true },
-  });
-  const sections = await prisma.section.findMany({ where: { active: true, ...(scope ? { id: { in: scope } } : {}) }, select: { id: true, name: true } });
+  const range = RANGES[String(req.query.range)] ? String(req.query.range) : 'today';
+  const { days, spark } = RANGES[range];
+  const now = todayDate(); // today's IST calendar date as UTC midnight
+  const periodStart = istMidnight(addDays(now, 1 - days));
+  const since = istMidnight(addDays(now, 1 - Math.max(2 * days, spark)));
+  const testScopeSql = scope ? (scope.length ? Prisma.sql`x."sectionId" IN (${Prisma.join(scope)})` : Prisma.sql`FALSE`) : null;
 
-  // Pipeline across the whole workflow (§2) — current records per stage.
+  /** Rows per IST day for one timestamp column: a dense series for the sparkline plus period totals. */
+  const flow = async (table: string, column: string, extra: Prisma.Sql = Prisma.empty) => {
+    const col = Prisma.raw(`x."${column}"`);
+    const rows = await prisma.$queryRaw<{ d: string; n: number }[]>`
+      SELECT to_char(${col} + interval '330 minutes', 'YYYY-MM-DD') AS d, count(*)::int AS n
+      FROM ${Prisma.raw(`"${table}"`)} x
+      WHERE ${col} >= ${since} ${extra}
+      GROUP BY 1`;
+    const byDay = new Map(rows.map((r) => [r.d, r.n]));
+    const at = (daysAgo: number) => byDay.get(isoDay(addDays(now, -daysAgo))) ?? 0;
+    const sum = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => at(from + i)).reduce((a, b) => a + b, 0);
+    return {
+      series: Array.from({ length: spark }, (_, i) => ({ day: isoDay(addDays(now, i - spark + 1)), n: at(spark - 1 - i) })),
+      current: sum(0, days),
+      previous: sum(days, 2 * days),
+    };
+  };
+
+  const testScope = scope ? { sectionId: { in: scope } } : {};
+  const regScope = scope ? { tests: { some: { sectionId: { in: scope } } } } : {};
+  const reportScope = scope ? { OR: [{ sectionId: { in: scope } }, { sectionId: null }] } : {};
+  const regScopeSql = scope ? Prisma.sql`AND EXISTS (SELECT 1 FROM "RegistrationTest" t WHERE t."registrationId" = x."id" AND t."sectionId" IN (${scope.length ? Prisma.join(scope) : Prisma.sql`NULL`}))` : Prisma.empty;
+  const [openEnquiries, activeSamples, testsInProgress, reportsAwaiting, enquiryFlow, registeredFlow, assignedFlow, reportFlow] = await Promise.all([
+    prisma.enquiry.count({ where: { status: { in: ['NEW', 'IN_DISCUSSION'] } } }),
+    prisma.registration.count({ where: { status: { in: ['REGISTERED', 'IN_TESTING', 'TESTING_COMPLETE'] }, ...regScope } }),
+    prisma.registrationTest.count({ where: { status: { in: ['ASSIGNED', 'IN_TESTING', 'SUBMITTED', 'CORRECTION_REQUIRED'] }, ...testScope } }),
+    prisma.report.count({ where: { status: { in: ['DRAFT', 'PREVIEW'] }, ...reportScope } }),
+    flow('Enquiry', 'createdAt'),
+    flow('Registration', 'approvedAt', regScopeSql),
+    flow('RegistrationTest', 'assignedAt', testScopeSql ? Prisma.sql`AND ${testScopeSql}` : Prisma.empty),
+    flow('Report', 'createdAt', testScopeSql ? Prisma.sql`AND (x."sectionId" IS NULL OR ${testScopeSql})` : Prisma.empty),
+  ]);
+
+  // Pipeline across the whole workflow (§2): open records per stage; the two flow stages follow the range.
   const pipeline = await Promise.all([
     prisma.enquiry.count({ where: { status: { in: ['NEW', 'IN_DISCUSSION'] } } }),
-    prisma.quotation.count({ where: { status: { in: ['DRAFT', 'INTERNAL_REVIEW', 'SENT'] } } }),
-    prisma.sampleReceipt.count({ where: { status: { in: ['RECEIVED', 'PRE_REGISTERED'] } } }),
+    prisma.quotation.count({ where: { status: { in: ['DRAFT', 'INTERNAL_REVIEW'] } } }),
+    prisma.sampleReceipt.count({ where: { receivedAt: { gte: periodStart } } }),
     prisma.registration.count({ where: { status: { in: ['REGISTERED', 'IN_TESTING'] } } }),
-    prisma.registration.count({ where: { status: 'TESTING_COMPLETE' } }),
-    prisma.report.count({ where: { status: 'RELEASED' } }),
-    prisma.invoice.count({ where: { status: { in: ['DRAFT', 'APPROVED', 'ISSUED'] } } }),
+    prisma.registrationTest.count({ where: { status: 'SUBMITTED', ...testScope } }),
+    prisma.report.count({ where: { releasedAt: { gte: periodStart } } }),
+    prisma.invoice.count({ where: { status: { in: ['DRAFT', 'APPROVED'] } } }),
+  ]);
+
+  // Section progress: approved tests out of all tests on samples currently registered / in testing.
+  const [sections, progress] = await Promise.all([
+    prisma.section.findMany({ where: { active: true }, select: { id: true, code: true, name: true }, orderBy: { code: 'asc' } }),
+    prisma.registrationTest.groupBy({
+      by: ['sectionId', 'status'],
+      where: { registration: { status: { in: ['REGISTERED', 'IN_TESTING'] } }, ...testScope },
+      _count: { _all: true },
+    }),
   ]);
 
   res.json({
+    range,
     counts,
-    workload: sections.map((s) => ({
-      section: s,
-      byStatus: Object.fromEntries(workload.filter((w) => w.sectionId === s.id).map((w) => [w.status, w._count._all])),
-    })),
-    pipeline: ['Enquiries', 'Quotations', 'Samples received', 'In testing', 'Ready to report', 'Reports to dispatch', 'Invoices open'].map((label, i) => ({ label, count: pipeline[i] })),
+    kpis: {
+      openEnquiries: { value: openEnquiries, ...enquiryFlow },
+      activeSamples: { value: activeSamples, ...registeredFlow },
+      testsInProgress: { value: testsInProgress, ...assignedFlow },
+      reportsAwaitingApproval: { value: reportsAwaiting, ...reportFlow },
+    },
+    pipeline: ['enquiries', 'quotations', 'samplesReceived', 'testing', 'review', 'reportsReleased', 'invoicing'].map((key, i) => ({ key, count: pipeline[i] })),
+    // `index` is the section's position in the full list, so a section keeps its colour whatever the user's scope.
+    sections: sections
+      .map((s, index) => {
+        const rows = progress.filter((g) => g.sectionId === s.id);
+        return { id: s.id, name: s.name, index, done: rows.find((g) => g.status === 'APPROVED')?._count._all ?? 0, total: rows.reduce((a, g) => a + g._count._all, 0) };
+      })
+      .filter((s) => !scope || scope.includes(s.id)),
+    recent: LAB_PERMS.some((p) => can(me, p)) ? await recentActivity(scope) : null,
   });
 });
+
+const RANGES: Record<string, { days: number; spark: number }> = { today: { days: 1, spark: 14 }, week: { days: 7, spark: 28 }, month: { days: 30, spark: 60 } };
+const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+/** The instant an IST calendar day (given as UTC midnight) begins. */
+const istMidnight = (d: Date) => new Date(d.getTime() - 330 * 60000);
+/** Users who work with samples see the recent-activity feed. */
+const LAB_PERMS = ['reg.pre', 'reg.approve', 'test.editMethod', 'sec.assign', 'test.enter', 'test.review', 'report.release'] as const;
+
+const ACTIVITY: Record<string, string> = {
+  PRE_REGISTER: 'Sample pre-registered',
+  REGISTERED: 'Registration completed',
+  TESTS_ASSIGNED: 'Tests allocated',
+  CANCELLED: 'Registration cancelled',
+  OBSERVATIONS_SAVED: 'Observations recorded',
+  SUBMITTED: 'Test result submitted',
+  REVIEW_APPROVED: 'Reviewed and approved',
+  REVIEW_RETURNED: 'Returned for correction',
+  REPORT_RELEASED: 'Report released',
+};
+
+/** Latest workflow events from the audit trail, resolved to their sample and limited to the user's sections. */
+async function recentActivity(scope: string[] | null) {
+  const logs = await prisma.auditLog.findMany({
+    where: { entityType: { in: ['Registration', 'RegistrationTest', 'Report'] }, action: { in: Object.keys(ACTIVITY) }, entityId: { not: null } },
+    orderBy: { at: 'desc' },
+    take: 60,
+    select: { id: true, entityType: true, entityId: true, action: true, at: true, userName: true },
+  });
+  const ids = (type: string) => [...new Set(logs.filter((l) => l.entityType === type).map((l) => l.entityId!))];
+  const reg = { select: { id: true, number: true, sampleName: true, customer: { select: { name: true } }, tests: { select: { sectionId: true } } } } as const;
+  const [sectionList, tests, regs, reports] = await Promise.all([
+    prisma.section.findMany({ select: { id: true, name: true } }),
+    prisma.registrationTest.findMany({ where: { id: { in: ids('RegistrationTest') } }, select: { id: true, testName: true, status: true, sectionId: true, registration: reg } }),
+    prisma.registration.findMany({ where: { id: { in: ids('Registration') } }, select: { ...reg.select, status: true } }),
+    prisma.report.findMany({ where: { id: { in: ids('Report') } }, select: { id: true, status: true, sectionId: true, registration: reg } }),
+  ]);
+  const sectionName = new Map(sectionList.map((x) => [x.id, x.name]));
+  type Reg = (typeof tests)[number]['registration'];
+  const inScope = (r: Reg) => !scope || r.tests.some((t) => scope.includes(t.sectionId));
+  const sample = (r: Reg) => ({ registrationId: r.id, sampleId: r.number, customer: r.customer.name });
+
+  const rows = [];
+  for (const l of logs) {
+    const base = { id: l.id, activity: ACTIVITY[l.action], at: l.at, by: l.userName, testId: null as string | null };
+    if (l.entityType === 'RegistrationTest') {
+      const t = tests.find((x) => x.id === l.entityId);
+      if (!t || (scope && !scope.includes(t.sectionId))) continue;
+      rows.push({ ...base, ...sample(t.registration), testId: t.id, what: `${t.testName} / ${sectionName.get(t.sectionId)}`, status: t.status });
+    } else if (l.entityType === 'Registration') {
+      const r = regs.find((x) => x.id === l.entityId);
+      if (!r || !inScope(r)) continue;
+      rows.push({ ...base, ...sample(r), what: `${r.sampleName} / ${[...new Set(r.tests.map((t) => sectionName.get(t.sectionId)))].join(', ')}`, status: r.status });
+    } else {
+      const rep = reports.find((x) => x.id === l.entityId);
+      if (!rep || !inScope(rep.registration)) continue;
+      rows.push({ ...base, ...sample(rep.registration), what: `${rep.registration.sampleName} / ${rep.sectionId ? sectionName.get(rep.sectionId) : 'Combined report'}`, status: rep.status });
+    }
+    if (rows.length === 5) break;
+  }
+  return rows;
+}
 
 // ---------------------------------------------------------------- notifications
 

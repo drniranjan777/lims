@@ -1,15 +1,19 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api, qs, type Paged } from './api';
 import { useToast } from '@/components/providers';
 
 /** Paged, searchable list with status filter. */
-export function useList<T>(path: string, initial: { status?: string; pageSize?: number; extra?: Record<string, string | undefined> } = {}) {
-  const [q, setQ] = useState('');
+export function useList<T>(path: string, initial: { q?: string; status?: string; pageSize?: number; extra?: Record<string, string | undefined> } = {}) {
+  const [q, setQ] = useState(initial.q ?? '');
   const [status, setStatus] = useState(initial.status ?? '');
   const [page, setPage] = useState(1);
+  // A new ?q= (e.g. from the top-bar search while already on the page) replaces the current search.
+  useEffect(() => {
+    if (initial.q !== undefined) (setQ(initial.q), setPage(1));
+  }, [initial.q]);
   const params = { q, status, page, pageSize: initial.pageSize ?? 25, ...initial.extra };
   const query = useQuery({ queryKey: [path, params], queryFn: () => api.get<Paged<T>>(`${path}${qs(params)}`), placeholderData: (prev) => prev });
   return {

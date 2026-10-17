@@ -19,6 +19,7 @@ COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/apps/api/package.json apps/api/
 COPY --from=build /repo/apps/api/dist apps/api/dist
 COPY --from=build /repo/apps/api/prisma apps/api/prisma
+COPY --from=build /repo/apps/api/assets apps/api/assets
 WORKDIR /repo/apps/api
 USER node
 EXPOSE 4000

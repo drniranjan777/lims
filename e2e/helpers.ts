@@ -25,7 +25,7 @@ export async function signIn(page: Page, email: string, password = PASSWORD) {
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Account menu for/ })).toBeVisible();
 }
 
 /** The page heading — document number followed by its status chip. */

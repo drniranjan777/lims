@@ -33,14 +33,12 @@ function LoginForm() {
   return (
     <form className="card login-card" onSubmit={submit}>
       <div className="bd grid">
-        <div className="row" style={{ gap: 12 }}>
-          <div className="brand-mark" aria-hidden>
-            LL
-          </div>
-          <div>
-            <h1>Lucid Labs LIMS</h1>
-            <div className="small muted">Sign in to continue</div>
-          </div>
+        <div className="login-head">
+          <h1>
+            <img className="logo-light" src="/logo.png" alt="NLIMS — Lab Management System" width={640} height={152} />
+            <img className="logo-dark" src="/logo-on-dark.png" alt="" aria-hidden width={640} height={152} />
+          </h1>
+          <div className="small muted">Sign in to continue</div>
         </div>
         <Field label="E-mail">
           <input type="email" autoComplete="username" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />

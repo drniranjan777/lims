@@ -24,7 +24,8 @@ interface Row {
 export default function RegistrationsPage() {
   const router = useRouter();
   const sectionName = useSectionName();
-  const list = useList<Row>('/registrations', { status: useSearchParams().get('status') ?? '' });
+  const params = useSearchParams();
+  const list = useList<Row>('/registrations', { q: params.get('q') ?? undefined, status: params.get('status') ?? '' });
   return (
     <>
       <PageHead title="Registration" sub="Pre-registered and registered samples with section progress (§4.4). New pre-registrations start from PO & Sample Receipt." />
